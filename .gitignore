@@ -7,3 +7,4 @@ TEst.zip
 *.zip
 *.tar.gz
 *.log
+.env.local
