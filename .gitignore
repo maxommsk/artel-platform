@@ -8,3 +8,12 @@ TEst.zip
 *.tar.gz
 *.log
 .env.local
+# Большие файлы
+*.zip
+*.tar.gz
+TEst.zip
+# Директории сборки
+.next/
+.open-next/
+.output/
+.vercel/
