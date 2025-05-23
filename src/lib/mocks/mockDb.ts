@@ -4,6 +4,7 @@ export function createMockDb() {
   
   // Для хранения созданных пользователей
   const users = [];
+  let lastId = 0;
   
   return {
     prepare: (query: string) => ({
@@ -23,6 +24,21 @@ export function createMockDb() {
             return { results: [{ name: 'user' }] };
           }
           
+          // Для получения пользователя по ID
+          if (query.includes('SELECT * FROM users WHERE id = ?')) {
+            console.log('Mock DB: Returning mock user for ID query');
+            return { 
+              results: [{ 
+                id: 1, 
+                username: 'mockuser', 
+                email: 'mock@example.com',
+                password_hash: '$2a$10$XQxBGI0Vz8mGUx.j3UZBxeKFH9CCzZpHJoB1aP5RgXJJcBpHwFp2K',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }] 
+            };
+          }
+          
           // Для других запросов возвращаем пустой результат
           return { results: [] };
         },
@@ -30,10 +46,16 @@ export function createMockDb() {
         run: async () => {
           console.log('Mock DB run query:', query);
           
+          // Для INSERT INTO users
+          if (query.includes('INSERT INTO users')) {
+            lastId = 1;
+            console.log('Mock DB: Created user with ID', lastId);
+          }
+          
           // Для всех запросов возвращаем успешный результат
           return { 
             success: true, 
-            meta: { last_row_id: 1 }
+            meta: { last_row_id: lastId || 1 }
           };
         }
       })
