@@ -2,15 +2,18 @@
 export function createMockDb() {
   console.log('Using mock database');
   
+  // Для хранения созданных пользователей
+  const users = [];
+  
   return {
     prepare: (query: string) => ({
       bind: (...params: any[]) => ({
         all: async () => {
           console.log('Mock DB query:', query);
-          console.log('Mock DB params:', params);
           
           // Для проверки существования пользователя всегда возвращаем пустой массив
-          if (query.includes('SELECT * FROM users WHERE username')) {
+          if (query.includes('SELECT * FROM users WHERE username') || 
+              query.includes('SELECT * FROM users WHERE username = ? OR email = ?')) {
             console.log('Mock DB: Returning empty results for user existence check');
             return { results: [] };
           }
@@ -26,8 +29,8 @@ export function createMockDb() {
         
         run: async () => {
           console.log('Mock DB run query:', query);
-          console.log('Mock DB run params:', params);
           
+          // Для всех запросов возвращаем успешный результат
           return { 
             success: true, 
             meta: { last_row_id: 1 }
