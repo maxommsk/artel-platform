@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
+import { User } from '@/lib/models';
+import { createMockDb } from '@/lib/mocks/mockDb';
 
 export async function POST(request: NextRequest) {
   try {
