@@ -1,20 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
-import { User } from '@/lib/models';
-import { createMockDb } from '@/lib/mocks/mockDb';
-
-
 export async function POST(request: NextRequest) {
   try {
     interface LoginRequestBody {
-      username: string;
+      email?: string;
+      username?: string;
       password: string;
     }
 
     const body = await request.json() as LoginRequestBody;
-    const { username, password } = body;
+    const { email, username, password } = body;
+    
+    // Используем email как username, если username не предоставлен
+    const loginIdentifier = username || email;
 
-    if (!username || !password) {
+    if (!loginIdentifier || !password) {
       return NextResponse.json({ success: false, message: 'Заполните все поля' }, { status: 400 });
     }
 
@@ -26,9 +24,15 @@ export async function POST(request: NextRequest) {
 
     if (!db) throw new Error('База данных не найдена!');
 
-    const { results } = await db.prepare(
-      'SELECT * FROM users WHERE username = ?'
-    ).bind(username).all();
+    // Проверяем по email или username
+    const isEmail = loginIdentifier.includes('@');
+    const query = isEmail 
+      ? 'SELECT * FROM users WHERE email = ?' 
+      : 'SELECT * FROM users WHERE username = ?';
+    
+    console.log(`Attempting login with ${isEmail ? 'email' : 'username'}: ${loginIdentifier}`);
+    
+    const { results } = await db.prepare(query).bind(loginIdentifier).all();
 
     const user = results?.[0];
     if (!user) {
