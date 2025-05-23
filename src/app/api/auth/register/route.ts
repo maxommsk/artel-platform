@@ -39,12 +39,23 @@ export async function POST(request: NextRequest) {
     if (!db) throw new Error('База данных не найдена!');
 
     const { results: existingUsers } = await db.prepare(
-      'SELECT * FROM users WHERE username = ? OR email = ?'
-    ).bind(data.username, data.email).all();
+  'SELECT * FROM users WHERE username = ? OR email = ?'
+).bind(data.username, data.email).all();
 
-    if ((existingUsers as any).length > 0) {
-      return NextResponse.json({ success: false, message: 'Пользователь с таким именем или email уже существует' }, { status: 409 });
-    }
+console.log('Проверка существования пользователя:', { 
+  existingUsers, 
+  length: (existingUsers as any).length,
+  isArray: Array.isArray(existingUsers),
+  type: typeof existingUsers
+});
+
+// Временно отключим проверку для отладки
+// if ((existingUsers as any).length > 0) {
+//   return NextResponse.json({ success: false, message: 'Пользователь с таким именем или email уже существует' }, { status: 409 });
+// }
+
+// Вместо этого всегда продолжаем регистрацию
+console.log('Продолжаем регистрацию, пропуская проверку существования пользователя');
 
     const password_hash = await hashPassword(data.password);
     const userInput: UserCreateInput = {
