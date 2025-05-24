@@ -19,7 +19,8 @@ interface AuthApiResponse { // Или LoginApiResponse, если это боле
   success: boolean;
   message?: string;
   error?: string;
-  // token?: string; // Например, если API входа возвращает токен
+  token?: string; // Например, если API входа возвращает токен
+  user?: any;
   // userId?: string;
   // ... другие поля, которые может вернуть API входа ...
 }
@@ -52,10 +53,18 @@ export function LoginForm() {
         body: JSON.stringify({ username, password }),
       });
 
-const data: AuthApiResponse = await response.json();
+      const data: AuthApiResponse = await response.json();
 
       if (!response.ok) {
         throw new Error(data.message || 'Ошибка при входе');
+      }
+
+      // Сохраняем токен и информацию о пользователе
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+      }
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
       }
 
       // Перенаправление в личный кабинет
@@ -173,11 +182,19 @@ export function RegisterForm() {
       });
 
       // ... (код fetch запроса) ...
-const data: RegisterApiResponse = await response.json(); // Теперь RegisterApiResponse определен выше
+      const data: RegisterApiResponse = await response.json(); // Теперь RegisterApiResponse определен выше
 
-if (!response.ok) {
-  throw new Error(data.message || data.error || 'Ошибка при регистрации');
-}
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Ошибка при регистрации');
+      }
+
+      // Сохраняем токен и информацию о пользователе, если они есть в ответе
+      if (data.token) {
+        localStorage.setItem('authToken', data.token);
+      }
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
 
       // Перенаправление в личный кабинет
       router.push('/dashboard');
@@ -324,3 +341,4 @@ if (!response.ok) {
     </div>
   );
 }
+
