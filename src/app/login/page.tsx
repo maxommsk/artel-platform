@@ -1,33 +1,50 @@
 'use client'
 
 import React, { useState } from 'react';
-
-// ...другие импорты
+import { useRouter } from 'next/navigation';
 
 interface LoginApiResponse {
-  success: boolean; // Или другое поле, указывающее на успех
-  error?: string;   // Поле ошибки, если запрос неудачен
-  // ... другие поля, которые может вернуть API при успехе, например, token, user, etc.
+  success: boolean;
+  error?: string;
+  token?: string;
+  user?: any;
 }
-
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
+    const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password }),
-        });
-        const data: LoginApiResponse = await res.json();
-        if (res.ok) {
-            setMessage('✅ Вход выполнен успешно!');
-        } else {
-            setMessage(`❌ Ошибка: ${data.error || 'Что-то пошло не так'}`);
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+            const data: LoginApiResponse = await res.json();
+            
+            if (res.ok) {
+                setMessage('✅ Вход выполнен успешно!');
+                
+                // Сохраняем токен и информацию о пользователе
+                if (data.token) {
+                    localStorage.setItem('authToken', data.token);
+                }
+                if (data.user) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                }
+                
+                // Перенаправление на дашборд
+                router.push('/dashboard');
+            } else {
+                setMessage(`❌ Ошибка: ${data.error || 'Что-то пошло не так'}`);
+            }
+        } catch (error) {
+            setMessage('❌ Ошибка: Не удалось выполнить запрос');
+            console.error(error);
         }
     };
 
@@ -59,3 +76,4 @@ export default function LoginPage() {
         </div>
     );
 }
+

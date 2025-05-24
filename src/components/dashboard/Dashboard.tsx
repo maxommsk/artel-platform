@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
@@ -170,6 +169,8 @@ export function DashboardNavbar({ user, activeTab, onTabChange }: {
       await fetch('/api/auth/logout', {
         method: 'POST',
       });
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
       router.push('/login');
     } catch (error) {
       console.error('Ошибка при выходе:', error);
@@ -547,31 +548,73 @@ export function Dashboard() {
   const { locale, setLocale } = useLocale(); // Получаем текущий язык и функцию его установки
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    // Проверяем наличие токена авторизации
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    // Пытаемся получить данные пользователя из localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
       try {
-        const response = await fetch('/api/user/me');
-const data: UserApiResponse = await response.json(); // Типизируем data
-
-if (!response.ok) {
-  throw new Error(data.message || data.error || 'Ошибка при получении данных пользователя');
-}
-        // Устанавливаем язык пользователя, если он есть и отличается от текущего
-        if (data.user.language && data.user.language !== locale) {
-           setLocale(data.user.language);
-        }
-      } catch (err: any) {
-        setError(err.message);
-        // Перенаправление на страницу входа при ошибке аутентификации
-        if (err.message === 'Требуется аутентификация' || (err.response && err.response.status === 401)) {
-          router.push('/login');
-        }
-      } finally {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
         setLoading(false);
+        
+        // Устанавливаем язык пользователя, если он есть и отличается от текущего
+        if (parsedUser.language && parsedUser.language !== locale) {
+          setLocale(parsedUser.language);
+        }
+      } catch (err) {
+        console.error('Ошибка при парсинге данных пользователя:', err);
+        fetchUserData(token);
       }
-    };
+    } else {
+      fetchUserData(token);
+    }
+  }, [router, locale, setLocale]);
 
-    fetchUserData();
-  }, [router, locale, setLocale]); // Добавили locale и setLocale в зависимости
+  const fetchUserData = async (token: string) => {
+    try {
+      const response = await fetch('/api/user/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Если токен недействителен, перенаправляем на страницу входа
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('user');
+          router.push('/login');
+          return;
+        }
+        throw new Error('Ошибка при получении данных пользователя');
+      }
+
+      const data: UserApiResponse = await response.json();
+      setUser(data.user);
+      
+      // Устанавливаем язык пользователя, если он есть и отличается от текущего
+      if (data.user.language && data.user.language !== locale) {
+        setLocale(data.user.language);
+      }
+      
+      // Обновляем данные в localStorage
+      localStorage.setItem('user', JSON.stringify(data.user));
+    } catch (err: any) {
+      setError(err.message);
+      // Перенаправление на страницу входа при ошибке аутентификации
+      if (err.message === 'Требуется аутентификация' || (err.response && err.response.status === 401)) {
+        router.push('/login');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const renderTabContent = () => {
     if (!user) return null; // Не рендерим контент, пока пользователь не загружен
