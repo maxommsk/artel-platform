@@ -12,23 +12,18 @@ interface RegisterApiResponse {
   success: boolean;
   message?: string;
   error?: string;
-  // ... другие поля ...
+  token?: string;
+  user?: any;
 }
 
-interface RegisterApiResponse {
+interface AuthApiResponse {
   success: boolean;
   message?: string;
   error?: string;
-  token?: string; // Добавлено
-  user?: any; 
-  // userId?: string;
-  // ... другие поля, которые может вернуть API входа ...
+  token?: string;
+  user?: any;
+  // ... другие поля ...
 }
-
-// ... остальной код вашего файла AuthForms.tsx ...
-
-
-// ... остальной код вашего файла AuthForms.tsx ...
 
 
 // Компонент формы входа
