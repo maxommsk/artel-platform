@@ -15,12 +15,12 @@ interface RegisterApiResponse {
   // ... другие поля ...
 }
 
-interface AuthApiResponse { // Или LoginApiResponse, если это более подходящее имя
+interface RegisterApiResponse {
   success: boolean;
   message?: string;
   error?: string;
-  token?: string; // Например, если API входа возвращает токен
-  user?: any;
+  token?: string; // Добавлено
+  user?: any; 
   // userId?: string;
   // ... другие поля, которые может вернуть API входа ...
 }
