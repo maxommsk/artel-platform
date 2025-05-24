@@ -189,7 +189,7 @@ export function DashboardNavbar({ user, activeTab, onTabChange }: {
     // Роли из ТЗ: guest, member, administrator
     // Наши роли: guest, user, member, manager, admin
     // Адаптируем: guest -> guest, user -> guest, member -> member, manager -> admin, admin -> admin
-    const userRoles = user?.roles.map(role => {
+    const userRoles = user?.roles?.map(role => {
         if (role === 'user') return 'guest';
         if (role === 'manager') return 'admin';
         return role;
@@ -346,7 +346,7 @@ if (!response.ok) {
           </div>
           <div>
             <p className="text-gray-600">Роли:</p>
-            <p className="font-medium">{user?.roles.join(', ')}</p>
+            <p className="font-medium">{user?.roles?.join(', ') || 'Не указаны'}</p>
           </div>
         </div>
       </div>
@@ -453,14 +453,14 @@ if (!response.ok) {
       }
     };
 
-    if (user && user.roles.includes('member')) {
+    if (user && user.roles && user.roles.includes('member')) {
       fetchMemberData();
     } else {
       setLoading(false);
     }
   }, [user]);
 
-  if (!user || !user.roles.includes('member')) {
+  if (!user || !user.roles || !user.roles.includes('member')) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6 mt-6">
         <h2 className="text-xl font-bold mb-4">Информация о членстве</h2>
@@ -562,6 +562,10 @@ export function Dashboard() {
     if (userData) {
       try {
         const parsedUser = JSON.parse(userData);
+        // Убедимся, что у пользователя есть поле roles
+        if (!parsedUser.roles) {
+          parsedUser.roles = ['user']; // Устанавливаем роль по умолчанию
+        }
         setUser(parsedUser);
         setLoading(false);
         
