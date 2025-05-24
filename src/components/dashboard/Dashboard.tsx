@@ -19,6 +19,8 @@ interface UserApiResponse {
     id: number;
     name: string;
     email: string;
+    username?: string; // Добавляем как опциональное
+    roles?: string[]; // Добавляем как опциональное
     language?: string; // Добавляем поле language как опциональное
     // ... другие поля ...
   };
@@ -596,7 +598,17 @@ export function Dashboard() {
       }
 
       const data: UserApiResponse = await response.json();
-      setUser(data.user);
+      
+      // Преобразуем данные пользователя к нужному формату
+      const userData: User = {
+        id: data.user.id,
+        username: data.user.username || data.user.name || data.user.email.split('@')[0], // Используем name или часть email как username
+        email: data.user.email,
+        roles: data.user.roles || ['user'], // Используем роль по умолчанию, если не указана
+        language: data.user.language
+      };
+      
+      setUser(userData);
       
       // Устанавливаем язык пользователя, если он есть и отличается от текущего
       if (data.user.language && data.user.language !== locale) {
@@ -604,7 +616,7 @@ export function Dashboard() {
       }
       
       // Обновляем данные в localStorage
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('user', JSON.stringify(userData));
     } catch (err: any) {
       setError(err.message);
       // Перенаправление на страницу входа при ошибке аутентификации
