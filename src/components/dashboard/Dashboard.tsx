@@ -314,13 +314,25 @@ export function ProfileTab({ user }: { user: User | null }) {
         }),
       });
 
-      // ... (код fetch запроса на обновление профиля) ...
-const data: ProfileUpdateApiResponse = await response.json(); // Типизируем data
+      // Исправленная обработка ответа
+      let data: ProfileUpdateApiResponse = {};
+      
+      // Проверяем, есть ли контент в ответе
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const text = await response.text();
+          if (text && text.trim()) {
+            data = JSON.parse(text);
+          }
+        } catch (parseError) {
+          console.error('Ошибка при парсинге JSON:', parseError);
+        }
+      }
 
-if (!response.ok) {
-  throw new Error(data.message || data.error || 'Ошибка при обновлении профиля');
-}
-
+      if (!response.ok) {
+        throw new Error(data.message || data.error || 'Ошибка при обновлении профиля');
+      }
 
       setMessage({ text: 'Профиль успешно обновлен', type: 'success' });
     } catch (err: any) {
