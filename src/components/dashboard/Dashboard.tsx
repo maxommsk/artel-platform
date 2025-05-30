@@ -268,7 +268,11 @@ export function DashboardNavbar({ user, activeTab, onTabChange }: {
   );
 }
 
-// Компонент профиля пользователя (без изменений)
+'use client';
+
+import React, { useState, useEffect } from 'react';
+
+// Компонент профиля пользователя с расширенным логированием
 export function ProfileTab({ user }: { user: User | null }) {
   const [formData, setFormData] = useState({
     first_name: user?.first_name || '',
@@ -300,12 +304,28 @@ export function ProfileTab({ user }: { user: User | null }) {
     setLoading(true);
     setMessage({ text: '', type: '' });
 
+    // Расширенное логирование для отладки
+    console.log('Отправляемые данные:', formData);
+    
     try {
+      // Добавляем токен авторизации из localStorage, если он есть
+      const token = localStorage.getItem('authToken');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+        console.log('Токен авторизации добавлен в заголовки');
+      } else {
+        console.log('Токен авторизации отсутствует');
+      }
+
+      console.log('Заголовки запроса:', headers);
+      
       const response = await fetch('/api/user/profile', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           first_name: formData.first_name,
           last_name: formData.last_name,
@@ -314,29 +334,44 @@ export function ProfileTab({ user }: { user: User | null }) {
         }),
       });
 
-      // Исправленная обработка ответа
+      console.log('Статус ответа:', response.status);
+      console.log('Заголовки ответа:', Object.fromEntries(response.headers.entries()));
+
+      // Исправленная обработка ответа с расширенным логированием
       let data: ProfileUpdateApiResponse = {};
+      let responseText = '';
       
-      // Проверяем, есть ли контент в ответе
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          const text = await response.text();
-          if (text && text.trim()) {
-            data = JSON.parse(text);
+      try {
+        // Получаем текст ответа
+        responseText = await response.text();
+        console.log('Текст ответа:', responseText);
+        
+        // Проверяем, есть ли контент в ответе
+        if (responseText && responseText.trim()) {
+          try {
+            data = JSON.parse(responseText);
+            console.log('Распарсенные данные:', data);
+          } catch (parseError) {
+            console.error('Ошибка при парсинге JSON:', parseError);
           }
-        } catch (parseError) {
-          console.error('Ошибка при парсинге JSON:', parseError);
+        } else {
+          console.log('Получен пустой ответ от сервера');
         }
+      } catch (textError) {
+        console.error('Ошибка при получении текста ответа:', textError);
       }
 
       if (!response.ok) {
-        throw new Error(data.message || data.error || 'Ошибка при обновлении профиля');
+        const errorMessage = data.message || data.error || `Ошибка при обновлении профиля (${response.status})`;
+        console.error('Ошибка запроса:', errorMessage);
+        throw new Error(errorMessage);
       }
 
+      console.log('Профиль успешно обновлен');
       setMessage({ text: 'Профиль успешно обновлен', type: 'success' });
     } catch (err: any) {
-      setMessage({ text: err.message, type: 'error' });
+      console.error('Перехваченная ошибка:', err);
+      setMessage({ text: err.message || 'Неизвестная ошибка при обновлении профиля', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -439,6 +474,7 @@ export function ProfileTab({ user }: { user: User | null }) {
     </div>
   );
 }
+
 
 // Компонент для отображения информации о членстве (без изменений)
 export function MembershipInfo({ user }: { user: User | null }) {
