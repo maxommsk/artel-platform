@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
 
 // Используем тот же секретный ключ, что и в lib/auth.ts
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'znk-artel-secret-key');
 
 export async function GET(request: NextRequest) {
   try {
+    // Динамический импорт jose для совместимости ESM/CommonJS
+    const { jwtVerify } = await import('jose');
+    
     // Получаем токен из заголовка Authorization
     const authHeader = request.headers.get('Authorization');
     let token = '';
