@@ -511,7 +511,7 @@ export function ProfileTab({ user, setUser }: { user: User | null; setUser: (use
   );
 }
 
-// Компонент для отображения информации о членстве (без изменений)
+// Компонент для отображения информации о членстве
 export function MembershipInfo({ user }: { user: User | null }) {
   const [memberData, setMemberData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -521,7 +521,8 @@ export function MembershipInfo({ user }: { user: User | null }) {
     const fetchMemberData = async () => {
       try {
         const response = await fetch('/api/member/info');
-        const data = await response.json();
+        // Явно типизируем результат запроса
+        const data = await response.json() as MemberApiResponse;
         setMemberData(data.member);
       } catch (err) {
         setError('Ошибка при загрузке данных о членстве');
