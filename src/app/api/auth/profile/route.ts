@@ -9,6 +9,20 @@ interface ProfileUpdateRequest {
   phone?: string;
 }
 
+// Интерфейс для типизации пользователя
+interface UserRecord {
+  id: number;
+  username: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  middle_name?: string;
+  phone?: string;
+  password_hash?: string; // Сделано опциональным
+  created_at: string;
+  updated_at: string;
+}
+
 // Функция для создания мока базы данных
 function createMockDb() {
   console.log('Using mock database in profile route');
@@ -27,7 +41,7 @@ function createMockDb() {
                 last_name: 'Цветков',
                 middle_name: 'Юрьевич',
                 phone: '+79777707950',
-                password_hash: '$2a$10$XQxBGI0Vz8mGUx.j3UZBxeKFH9CCzZpHJoB1aP5RgXJJcBpHwFp2K', // Добавляем поле password_hash
+                password_hash: '$2a$10$XQxBGI0Vz8mGUx.j3UZBxeKFH9CCzZpHJoB1aP5RgXJJcBpHwFp2K',
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               }] 
@@ -79,7 +93,7 @@ export async function POST(request: NextRequest) {
       'SELECT * FROM users WHERE id = ?'
     ).bind(userId).all();
 
-    const user = results?.[0];
+    const user = results?.[0] as UserRecord;
     if (!user) {
       return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
     }
@@ -103,14 +117,16 @@ export async function POST(request: NextRequest) {
       'SELECT * FROM users WHERE id = ?'
     ).bind(userId).all();
 
-    const updatedUser = updatedResults?.[0];
+    const updatedUser = updatedResults?.[0] as UserRecord;
     if (!updatedUser) {
       return NextResponse.json({ success: false, message: 'Ошибка при получении обновленных данных' }, { status: 500 });
     }
 
-    // Безопасно удаляем чувствительные данные из ответа
-    const userWithoutPassword = { ...updatedUser };
-    if ('password_hash' in userWithoutPassword) {
+    // Создаем копию без чувствительных данных
+    const userWithoutPassword: UserRecord = { ...updatedUser };
+    
+    // Удаляем пароль, если он есть
+    if (userWithoutPassword.password_hash !== undefined) {
       delete userWithoutPassword.password_hash;
     }
 
