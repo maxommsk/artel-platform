@@ -320,7 +320,7 @@ export function ProfileTab({ user }: { user: User | null }) {
       console.log('Заголовки запроса:', headers);
       
       const response = await fetch('/api/user/profile', {
-        method: 'PUT',
+        method: 'POST', // Изменено с PUT на POST
         headers,
         body: JSON.stringify({
           first_name: formData.first_name,
