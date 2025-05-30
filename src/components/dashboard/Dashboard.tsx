@@ -319,8 +319,9 @@ export function ProfileTab({ user }: { user: User | null }) {
 
       console.log('Заголовки запроса:', headers);
       
-      const response = await fetch('/api/user/profile', {
-        method: 'POST', // Изменено с PUT на POST
+      // Изменяем URL на /api/auth/profile вместо /api/user/profile
+      const response = await fetch('/api/auth/profile', {
+        method: 'POST',
         headers,
         body: JSON.stringify({
           first_name: formData.first_name,
