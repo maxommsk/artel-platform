@@ -2,15 +2,9 @@
 
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { useRouter } from 'next/navigation';
-import { MessagesList } from './MessagesModule'; // Импортируем новый компонент
+import { MessagesList } from './MessagesModule'; // Импортируем компонент сообщений
 
-// ... ваши текущие импорты ...
-
-// ... ваши текущие импорты и другие интерфейсы ...
-
-
-// ... ваши текущие импорты и другие интерфейсы ...
-
+// Интерфейсы для API ответов
 interface UserApiResponse {
   success?: boolean;
   message?: string;
@@ -19,51 +13,27 @@ interface UserApiResponse {
     id: number;
     name: string;
     email: string;
-    username?: string; // Добавляем как опциональное
-    roles?: string[]; // Добавляем как опциональное
-    language?: string; // Добавляем поле language как опциональное
-    // ... другие поля ...
+    username?: string;
+    roles?: string[];
+    language?: string;
   };
-  // ... другие поля, которые может вернуть API ...
 }
-// ... остальной код вашего файла Dashboard.tsx ...
-
 
 interface MemberApiResponse {
   success?: boolean;
   message?: string;
   error?: string;
   member: {
-    // Определите структуру объекта member в соответствии с вашим API
-    // Например:
     id: number;
     name: string;
     // ... другие поля ...
   };
-  // ... другие поля, которые может вернуть API ...
 }
 
-// ... остальной код вашего файла Dashboard.tsx ...
-
-
-// Определение типа для контекста локализации
-interface LocaleContextType {
-  locale: string;
-  setLocale: (newLocale: string) => void; // Изменено с changeLocale на setLocale
-  t: (key: string) => string;
-  // ... другие свойства ...
-}
-
-// Теперь создание контекста с правильным типом
-const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
-
-// ... остальной код вашего файла Dashboard.tsx ...
-
-
-interface ProfileUpdateApiResponse { // или используйте ваш общий ApiErrorResponse
-  success?: boolean; // Если API возвращает такой флаг
-  message?: string;  // Поле для сообщения (об успехе или ошибке)
-  error?: string;    // Поле для сообщения об ошибке
+interface ProfileUpdateApiResponse {
+  success?: boolean;
+  message?: string;
+  error?: string;
   user?: {
     id: number;
     username: string;
@@ -75,10 +45,17 @@ interface ProfileUpdateApiResponse { // или используйте ваш о�
     roles: string[];
     language?: string;
   };
-  // ... другие поля, которые может вернуть API обновления профиля ...
 }
 
-// ... остальной код вашего файла Dashboard.tsx ...
+// Определение типа для контекста локализации
+interface LocaleContextType {
+  locale: string;
+  setLocale: (newLocale: string) => void;
+  t: (key: string) => string;
+}
+
+// Создание контекста с правильным типом
+const LocaleContext = createContext<LocaleContextType | undefined>(undefined);
 
 // Хук для использования локализации
 export const useLocale = () => {
@@ -89,7 +66,7 @@ export const useLocale = () => {
   return context;
 };
 
-// Пример словаря переводов
+// Словарь переводов
 const translations: Record<string, Record<string, string>> = {
   ru: {
     dashboardTitle: 'ЖНК "Артель"',
@@ -100,12 +77,11 @@ const translations: Record<string, Record<string, string>> = {
     roadmap: 'Дорожная карта',
     tokens: 'Токены',
     calculator: 'Калькулятор',
-    messages: 'Сообщения', // Новая вкладка
+    messages: 'Сообщения',
     members: 'Пайщики',
     properties: 'Недвижимость',
     users: 'Пользователи',
     settings: 'Настройки',
-    // ... другие переводы ...
   },
   en: {
     dashboardTitle: 'ZNK "Artel"',
@@ -116,12 +92,11 @@ const translations: Record<string, Record<string, string>> = {
     roadmap: 'Roadmap',
     tokens: 'Tokens',
     calculator: 'Calculator',
-    messages: 'Messages', // New tab
+    messages: 'Messages',
     members: 'Members',
     properties: 'Properties',
     users: 'Users',
     settings: 'Settings',
-    // ... other translations ...
   },
 };
 
@@ -165,7 +140,7 @@ interface User {
   middle_name?: string;
   phone?: string;
   roles: string[];
-  language?: string; // Добавлено поле языка
+  language?: string;
 }
 
 // Компонент навигационной панели
@@ -193,8 +168,8 @@ export function DashboardNavbar({ user, activeTab, onTabChange }: {
   // Определение доступных вкладок в зависимости от роли пользователя
   const getTabs = () => {
     const tabs = [
-      { id: 'profile', labelKey: 'profile', roles: ['guest', 'user', 'member', 'manager', 'admin'] }, // Добавлена роль guest для ТЗ
-      { id: 'messages', labelKey: 'messages', roles: ['user', 'member', 'manager', 'admin'] }, // Новая вкладка Сообщения
+      { id: 'profile', labelKey: 'profile', roles: ['guest', 'user', 'member', 'manager', 'admin'] },
+      { id: 'messages', labelKey: 'messages', roles: ['user', 'member', 'manager', 'admin'] },
     ];
 
     // Роли из ТЗ: guest, member, administrator
@@ -212,7 +187,7 @@ export function DashboardNavbar({ user, activeTab, onTabChange }: {
         { id: 'documents', labelKey: 'documents', roles: ['member', 'admin'] },
         { id: 'roadmap', labelKey: 'roadmap', roles: ['member', 'admin'] },
         { id: 'tokens', labelKey: 'tokens', roles: ['member', 'admin'] },
-        { id: 'calculator', labelKey: 'calculator', roles: ['guest', 'member', 'admin'] } // Доступен и guest
+        { id: 'calculator', labelKey: 'calculator', roles: ['guest', 'member', 'admin'] }
       );
     }
 
@@ -622,7 +597,7 @@ export default function Dashboard() {
       case 'profile':
         return <ProfileTab user={user} setUser={setUser} />;
       case 'messages':
-        return <MessagesList user={user} />;
+        return <MessagesList userId={user?.id ?? 0} />;
       // Другие вкладки...
       default:
         return (
