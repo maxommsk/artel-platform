@@ -27,6 +27,7 @@ function createMockDb() {
                 last_name: 'Цветков',
                 middle_name: 'Юрьевич',
                 phone: '+79777707950',
+                password_hash: '$2a$10$XQxBGI0Vz8mGUx.j3UZBxeKFH9CCzZpHJoB1aP5RgXJJcBpHwFp2K', // Добавляем поле password_hash
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
               }] 
@@ -107,8 +108,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Ошибка при получении обновленных данных' }, { status: 500 });
     }
 
-    // Удаляем чувствительные данные из ответа
-    const { password_hash: _, ...userWithoutPassword } = updatedUser;
+    // Безопасно удаляем чувствительные данные из ответа
+    const userWithoutPassword = { ...updatedUser };
+    if ('password_hash' in userWithoutPassword) {
+      delete userWithoutPassword.password_hash;
+    }
 
     return NextResponse.json({
       success: true,
