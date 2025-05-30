@@ -64,6 +64,17 @@ interface ProfileUpdateApiResponse { // или используйте ваш о�
   success?: boolean; // Если API возвращает такой флаг
   message?: string;  // Поле для сообщения (об успехе или ошибке)
   error?: string;    // Поле для сообщения об ошибке
+  user?: {
+    id: number;
+    username: string;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    middle_name?: string;
+    phone?: string;
+    roles: string[];
+    language?: string;
+  };
   // ... другие поля, которые может вернуть API обновления профиля ...
 }
 
@@ -269,7 +280,7 @@ export function DashboardNavbar({ user, activeTab, onTabChange }: {
 }
 
 // Компонент профиля пользователя
-export function ProfileTab({ user }: { user: User | null }) {
+export function ProfileTab({ user, setUser }: { user: User | null; setUser: (user: User) => void }) {
   const [formData, setFormData] = useState({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
@@ -300,7 +311,6 @@ export function ProfileTab({ user }: { user: User | null }) {
     setLoading(true);
     setMessage({ text: '', type: '' });
 
-    // Расширенное логирование для отладки
     console.log('Отправляемые данные:', formData);
     
     try {
@@ -319,7 +329,6 @@ export function ProfileTab({ user }: { user: User | null }) {
 
       console.log('Заголовки запроса:', headers);
       
-      // Изменяем URL на /api/auth/profile вместо /api/user/profile
       const response = await fetch('/api/auth/profile', {
         method: 'POST',
         headers,
@@ -332,18 +341,14 @@ export function ProfileTab({ user }: { user: User | null }) {
       });
 
       console.log('Статус ответа:', response.status);
-      console.log('Заголовки ответа:', Object.fromEntries(response.headers.entries()));
-
-      // Исправленная обработка ответа с расширенным логированием
+      
       let data: ProfileUpdateApiResponse = {};
       let responseText = '';
       
       try {
-        // Получаем текст ответа
         responseText = await response.text();
         console.log('Текст ответа:', responseText);
         
-        // Проверяем, есть ли контент в ответе
         if (responseText && responseText.trim()) {
           try {
             data = JSON.parse(responseText);
@@ -366,6 +371,40 @@ export function ProfileTab({ user }: { user: User | null }) {
 
       console.log('Профиль успешно обновлен');
       setMessage({ text: 'Профиль успешно обновлен', type: 'success' });
+      
+      // Обновляем данные пользователя в родительском компоненте и localStorage
+      if (user) {
+        // Создаем обновленный объект пользователя, сохраняя все существующие поля
+        const updatedUser = {
+          ...user,
+          first_name: formData.first_name,
+          last_name: formData.last_name,
+          middle_name: formData.middle_name,
+          phone: formData.phone
+        };
+        
+        // Обновляем состояние пользователя в родительском компоненте
+        setUser(updatedUser);
+        
+        // Обновляем данные пользователя в localStorage
+        try {
+          const storedUserData = localStorage.getItem('user');
+          if (storedUserData) {
+            const storedUser = JSON.parse(storedUserData);
+            const updatedStoredUser = {
+              ...storedUser,
+              first_name: formData.first_name,
+              last_name: formData.last_name,
+              middle_name: formData.middle_name,
+              phone: formData.phone
+            };
+            localStorage.setItem('user', JSON.stringify(updatedStoredUser));
+            console.log('Данные пользователя в localStorage обновлены');
+          }
+        } catch (storageError) {
+          console.error('Ошибка при обновлении localStorage:', storageError);
+        }
+      }
     } catch (err: any) {
       console.error('Перехваченная ошибка:', err);
       setMessage({ text: err.message || 'Неизвестная ошибка при обновлении профиля', type: 'error' });
@@ -482,317 +521,138 @@ export function MembershipInfo({ user }: { user: User | null }) {
     const fetchMemberData = async () => {
       try {
         const response = await fetch('/api/member/info');
-          
-const data: MemberApiResponse = await response.json(); // Типизируем data
-
-if (!response.ok) {
-  throw new Error(data.message || data.error || 'Ошибка при получении данных о членстве');
-}
-
+        const data = await response.json();
         setMemberData(data.member);
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err) {
+        setError('Ошибка при загрузке данных о членстве');
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    if (user && user.roles && user.roles.includes('member')) {
-      fetchMemberData();
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
+    fetchMemberData();
+  }, []);
 
-  if (!user || !user.roles || !user.roles.includes('member')) {
+  if (loading) {
+    return <div className="text-center py-4">Загрузка информации о членстве...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500 py-4">{error}</div>;
+  }
+
+  if (!memberData) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-        <h2 className="text-xl font-bold mb-4">Информация о членстве</h2>
-        <p className="text-gray-600">
-          Вы не являетесь пайщиком ЖНК "Артель". Чтобы стать пайщиком, ознакомьтесь с тарифами и подайте заявку.
-        </p>
-        <button className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-bold mb-6">Информация о членстве</h2>
+        <p className="mb-4">Вы не являетесь пайщиком ЖНК "Артель". Чтобы стать пайщиком, ознакомьтесь с тарифами и подайте заявку.</p>
+        <button className="bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
           Ознакомиться с тарифами
         </button>
       </div>
     );
   }
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-        <h2 className="text-xl font-bold mb-4">Информация о членстве</h2>
-        <p className="text-gray-600">Загрузка данных...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-        <h2 className="text-xl font-bold mb-4">Информация о членстве</h2>
-        <p className="text-red-600">{error}</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mt-6">
-      <h2 className="text-xl font-bold mb-4">Информация о членстве</h2>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-        <div>
-          <p className="text-gray-600">Статус членства:</p>
-          <p className="font-medium">{memberData.membership_status}</p>
-        </div>
-        <div>
-          <p className="text-gray-600">Тарифный план:</p>
-          <p className="font-medium">{memberData.tariff?.name || 'Не выбран'}</p>
-        </div>
-        <div>
-          <p className="text-gray-600">Позиция в очереди:</p>
-          <p className="font-medium">{memberData.queue_position || 'Не в очереди'}</p>
-        </div>
-        <div>
-          <p className="text-gray-600">Дата постановки в очередь:</p>
-          <p className="font-medium">{memberData.queue_date || 'Не в очереди'}</p>
-        </div>
-      </div>
-
-      <div className="bg-blue-50 p-4 rounded-lg">
-        <h3 className="text-lg font-semibold mb-2">Паспортные данные</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <p className="text-gray-600">Серия и номер:</p>
-            <p className="font-medium">
-              {memberData.passport_series && memberData.passport_number
-                ? `${memberData.passport_series} ${memberData.passport_number}`
-                : 'Не указаны'}
-            </p>
-          </div>
-          <div>
-            <p className="text-gray-600">Кем выдан:</p>
-            <p className="font-medium">{memberData.passport_issued_by || 'Не указано'}</p>
-          </div>
-          <div>
-            <p className="text-gray-600">Дата выдачи:</p>
-            <p className="font-medium">{memberData.passport_issue_date || 'Не указана'}</p>
-          </div>
-        </div>
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <h2 className="text-xl font-bold mb-6">Информация о членстве</h2>
+      {/* Отображение данных о членстве */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Здесь отображаем данные из memberData */}
       </div>
     </div>
   );
 }
 
-// Главный компонент дашборда
-export function Dashboard() {
+// Основной компонент Dashboard
+export default function Dashboard() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('profile');
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const { locale, setLocale } = useLocale(); // Получаем текущий язык и функцию его установки
 
   useEffect(() => {
-    // Проверяем наличие токена авторизации
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      router.push('/login');
-      return;
-    }
-
-    // Пытаемся получить данные пользователя из localStorage
-    const userData = localStorage.getItem('user');
-    if (userData) {
+    // Проверяем авторизацию при загрузке
+    const checkAuth = async () => {
       try {
-        const parsedUser = JSON.parse(userData);
-        // Убедимся, что у пользователя есть поле roles
-        if (!parsedUser.roles) {
-          parsedUser.roles = ['user']; // Устанавливаем роль по умолчанию
-        }
-        setUser(parsedUser);
-        setLoading(false);
+        // Сначала пытаемся получить пользователя из localStorage
+        const storedUser = localStorage.getItem('user');
+        const storedToken = localStorage.getItem('authToken');
         
-        // Устанавливаем язык пользователя, если он есть и отличается от текущего
-        if (parsedUser.language && parsedUser.language !== locale) {
-          setLocale(parsedUser.language);
-        }
-      } catch (err) {
-        console.error('Ошибка при парсинге данных пользователя:', err);
-        fetchUserData(token);
-      }
-    } else {
-      fetchUserData(token);
-    }
-  }, [router, locale, setLocale]);
-
-  const fetchUserData = async (token: string) => {
-    try {
-      const response = await fetch('/api/user/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Если токен недействителен, перенаправляем на страницу входа
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('user');
+        if (storedUser && storedToken) {
+          // Если есть данные в localStorage, используем их
+          setUser(JSON.parse(storedUser));
+          setLoading(false);
+          
+          // Дополнительно проверяем валидность токена на сервере
+          try {
+            const response = await fetch('/api/auth/verify', {
+              headers: {
+                'Authorization': `Bearer ${storedToken}`
+              }
+            });
+            
+            if (!response.ok) {
+              // Если токен недействителен, очищаем localStorage и перенаправляем на страницу входа
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('user');
+              router.push('/login');
+            }
+          } catch (verifyError) {
+            console.error('Ошибка при проверке токена:', verifyError);
+          }
+        } else {
+          // Если нет данных в localStorage, перенаправляем на страницу входа
           router.push('/login');
-          return;
         }
-        throw new Error('Ошибка при получении данных пользователя');
-      }
-
-      const data: UserApiResponse = await response.json();
-      
-      // Преобразуем данные пользователя к нужному формату
-      const userData: User = {
-        id: data.user.id,
-        username: data.user.username || data.user.name || data.user.email.split('@')[0], // Используем name или часть email как username
-        email: data.user.email,
-        roles: data.user.roles || ['user'], // Используем роль по умолчанию, если не указана
-        language: data.user.language
-      };
-      
-      setUser(userData);
-      
-      // Устанавливаем язык пользователя, если он есть и отличается от текущего
-      if (data.user.language && data.user.language !== locale) {
-        setLocale(data.user.language);
-      }
-      
-      // Обновляем данные в localStorage
-      localStorage.setItem('user', JSON.stringify(userData));
-    } catch (err: any) {
-      setError(err.message);
-      // Перенаправление на страницу входа при ошибке аутентификации
-      if (err.message === 'Требуется аутентификация' || (err.response && err.response.status === 401)) {
+      } catch (error) {
+        console.error('Ошибка при проверке авторизации:', error);
         router.push('/login');
       }
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
+    checkAuth();
+  }, [router]);
+
+  // Функция для отображения содержимого активной вкладки
   const renderTabContent = () => {
-    if (!user) return null; // Не рендерим контент, пока пользователь не загружен
-
     switch (activeTab) {
       case 'profile':
-        return (
-          <>
-            <ProfileTab user={user} />
-            <MembershipInfo user={user} />
-          </>
-        );
-      case 'messages': // Обработка новой вкладки
-        return <MessagesList userId={user.id} />;
-      case 'contributions':
-        return (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-6">Взносы</h2>
-            <p className="text-gray-600">Здесь будет отображаться информация о взносах.</p>
-            {/* TODO: Реализовать компонент ContributionsTab */}
-          </div>
-        );
-      case 'documents':
-        return (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-6">Документы</h2>
-            <p className="text-gray-600">Здесь будет отображаться информация о документах.</p>
-            {/* TODO: Реализовать компонент DocumentsTab */}
-          </div>
-        );
-      case 'roadmap':
-        return (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-6">Дорожная карта</h2>
-            <p className="text-gray-600">Здесь будет отображаться дорожная карта накопления.</p>
-            {/* TODO: Реализовать компонент RoadmapTab */}
-          </div>
-        );
-      case 'tokens':
-        return (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-6">Токены</h2>
-            <p className="text-gray-600">Здесь будет отображаться информация о токенах.</p>
-            {/* TODO: Реализовать компонент TokensTab */}
-          </div>
-        );
-      case 'calculator':
-        return (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-6">Калькулятор точки ускорения</h2>
-            <p className="text-gray-600">Здесь будет калькулятор точки ускорения.</p>
-            {/* TODO: Реализовать компонент CalculatorTab */}
-          </div>
-        );
-      case 'members':
-        return (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-6">Управление пайщиками</h2>
-            <p className="text-gray-600">Здесь будет отображаться список пайщиков.</p>
-            {/* TODO: Реализовать компонент MembersTab (Admin/Manager) */}
-          </div>
-        );
-      case 'properties':
-        return (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-6">Управление недвижимостью</h2>
-            <p className="text-gray-600">Здесь будет отображаться список объектов недвижимости.</p>
-            {/* TODO: Реализовать компонент PropertiesTab (Admin/Manager) */}
-          </div>
-        );
-      case 'users':
-        return (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-6">Управление пользователями</h2>
-            <p className="text-gray-600">Здесь будет отображаться список пользователей.</p>
-            {/* TODO: Реализовать компонент UsersTab (Admin) */}
-          </div>
-        );
-      case 'settings':
-        return (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-bold mb-6">Настройки системы</h2>
-            <p className="text-gray-600">Здесь будут настройки системы.</p>
-            {/* TODO: Реализовать компонент SettingsTab (Admin) */}
-          </div>
-        );
+        return <ProfileTab user={user} setUser={setUser} />;
+      case 'messages':
+        return <MessagesList user={user} />;
+      // Другие вкладки...
       default:
-        return null;
+        return (
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-bold mb-4">В разработке</h2>
+            <p>Данный раздел находится в разработке.</p>
+          </div>
+        );
     }
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen">Загрузка...</div>;
-  }
-
-  if (error && !user) {
-    // Показываем ошибку только если пользователь не загружен (т.е. не удалось аутентифицироваться)
-    return <div className="flex justify-center items-center h-screen text-red-600">Ошибка: {error}</div>;
-  }
-
-  return (
-      <div className="min-h-screen bg-gray-100">
-        <DashboardNavbar user={user} activeTab={activeTab} onTabChange={setActiveTab} />
-        <main className="container mx-auto px-4 py-8">
-          {renderTabContent()}
-        </main>
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Загрузка...</p>
+        </div>
       </div>
-  );
-}
+    );
+  }
 
-// Обертка для страницы дашборда, чтобы использовать LocaleProvider
-const DashboardPage = () => {
   return (
     <LocaleProvider>
-      <Dashboard />
+      <div className="min-h-screen bg-gray-100">
+        <DashboardNavbar user={user} activeTab={activeTab} onTabChange={setActiveTab} />
+        <div className="container mx-auto px-4 py-6">
+          {renderTabContent()}
+        </div>
+      </div>
     </LocaleProvider>
   );
-};
-
-export default DashboardPage;
+}
 
