@@ -268,11 +268,7 @@ export function DashboardNavbar({ user, activeTab, onTabChange }: {
   );
 }
 
-'use client';
-
-import React, { useState, useEffect } from 'react';
-
-// Компонент профиля пользователя с расширенным логированием
+// Компонент профиля пользователя
 export function ProfileTab({ user }: { user: User | null }) {
   const [formData, setFormData] = useState({
     first_name: user?.first_name || '',
@@ -474,7 +470,6 @@ export function ProfileTab({ user }: { user: User | null }) {
     </div>
   );
 }
-
 
 // Компонент для отображения информации о членстве (без изменений)
 export function MembershipInfo({ user }: { user: User | null }) {
