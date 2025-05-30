@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 
+// Интерфейс для типизации тела запроса
+interface ProfileUpdateRequest {
+  first_name?: string;
+  last_name?: string;
+  middle_name?: string;
+  phone?: string;
+}
+
 // Функция для создания мока базы данных
 function createMockDb() {
   console.log('Using mock database in profile route');
@@ -53,8 +61,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Недействительный токен' }, { status: 401 });
     }
 
-    // Получаем данные из запроса
-    const body = await request.json();
+    // Получаем данные из запроса с правильной типизацией
+    const body = await request.json() as ProfileUpdateRequest;
     const { first_name, last_name, middle_name, phone } = body;
 
     // Используем мок базы данных в продакшене или реальную базу данных в других окружениях
