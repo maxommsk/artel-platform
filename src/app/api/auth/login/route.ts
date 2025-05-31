@@ -12,6 +12,11 @@ interface MockUser {
   updated_at: string;
 }
 
+// Интерфейс для роли
+interface Role {
+  name: string;
+}
+
 // Функция для создания мока базы данных с реальной проверкой учетных данных
 function createMockDb() {
   console.log('Using enhanced mock database in login route');
@@ -131,13 +136,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Неверный логин или пароль' }, { status: 401 });
     }
 
-    const { results: roles } = await db.prepare(`
+    const { results: rolesResults } = await db.prepare(`
       SELECT r.name FROM roles r
       JOIN user_roles ur ON r.id = ur.role_id
       WHERE ur.user_id = ?
     `).bind(user.id).all();
 
+    // Убедимся, что все элементы в массиве имеют поле name
+    const roles: Role[] = rolesResults.filter((r): r is Role => 'name' in r);
     const roleNames = roles.map(r => r.name);
+    
     const token = await createToken(
       { 
         id: user.id as number, 
