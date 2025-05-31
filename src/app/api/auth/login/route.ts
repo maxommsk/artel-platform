@@ -146,19 +146,18 @@ export async function POST(request: NextRequest) {
     const roles: Role[] = rolesResults.filter((r): r is Role => 'name' in r);
     const roleNames = roles.map(r => r.name);
     
-    const token = await createToken(
-      { 
-        id: user.id as number, 
-        username: user.username as string, 
-        email: user.email as string, // Добавляем email в токен
-        roles: [
-          roleNames.length > 0 
-            ? { id: 1, name: roleNames[0] as string } 
-            : { id: 1, name: 'user' }
-        ]
-      }, 
-      roleNames as string[]
-    );
+    // Создаем токен только с полями, которые ожидает функция createToken
+    const tokenPayload = {
+      id: user.id as number,
+      username: user.username as string,
+      roles: [
+        roleNames.length > 0 
+          ? { id: 1, name: roleNames[0] as string } 
+          : { id: 1, name: 'user' }
+      ]
+    };
+    
+    const token = await createToken(tokenPayload, roleNames as string[]);
     
     await setAuthCookie(token);
 
@@ -166,6 +165,7 @@ export async function POST(request: NextRequest) {
     const userWithoutPassword = { ...user };
     delete userWithoutPassword.password_hash;
 
+    // Добавляем email в ответ, чтобы он был доступен на клиенте
     return NextResponse.json({
       success: true,
       message: 'Успешный вход',
