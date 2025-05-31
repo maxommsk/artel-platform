@@ -2,13 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
 import { User } from '@/lib/models';
 
+// Определяем интерфейс для пользователя в моке
+interface MockUser {
+  id: number;
+  username: string;
+  email: string;
+  password_hash: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Функция для создания мока базы данных с реальной проверкой учетных данных
 function createMockDb() {
   console.log('Using enhanced mock database in login route');
   
   // Хранилище пользователей для мока
   // В реальном приложении это должно быть заменено на настоящую базу данных
-  const mockUsers = [
+  const mockUsers: MockUser[] = [
     { 
       id: 1, 
       username: 'maxommsk@gmail.com', 
@@ -100,6 +110,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Неверный логин или пароль' }, { status: 401 });
     }
 
+    // Проверяем, что у пользователя есть поле password_hash
+    if (!('password_hash' in user)) {
+      return NextResponse.json({ success: false, message: 'Ошибка данных пользователя' }, { status: 500 });
+    }
+
     // Всегда проверяем пароль, даже в режиме мока
     let passwordMatch = false;
     
@@ -139,7 +154,9 @@ export async function POST(request: NextRequest) {
     
     await setAuthCookie(token);
 
-    const { password_hash: _, ...userWithoutPassword } = user;
+    // Безопасно удаляем пароль из объекта пользователя
+    const userWithoutPassword = { ...user };
+    delete userWithoutPassword.password_hash;
 
     return NextResponse.json({
       success: true,
