@@ -2,6 +2,8 @@ const jose = require('jose');
 const { SignJWT, jwtVerify } = jose;
 import { cookies } from 'next/headers';
 import type { User } from './models';
+const bcrypt = require('bcryptjs');
+const BCRYPT_ROUNDS = 12;
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'znk-artel-secret-key');
 const TOKEN_EXPIRATION_SECONDS = 60 * 60 * 24 * 7; // 7 days
