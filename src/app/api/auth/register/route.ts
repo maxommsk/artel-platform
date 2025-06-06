@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Инициализируем базу данных
     await initDatabase();
 
-    const data = await request.json();
+    const data = await request.json() as { username: string; email: string; password: string };
     const { username, email, password } = data;
 
     if (!username || !email || !password) {

@@ -86,7 +86,9 @@ function createMockDb() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json();
+    const body = await request.json();
+     const { username, password } = body as { username: string; password: string };
+
 
     if (!username || !password) {
       return NextResponse.json({ 
