@@ -49,13 +49,14 @@ console.log('Проверка существования пользовател�
   type: typeof existingUsers
 });
 
-// Временно отключим проверку для отладки
-// if ((existingUsers as any).length > 0) {
-//   return NextResponse.json({ success: false, message: 'Пользователь с таким именем или email уже существует' }, { status: 409 });
-// }
-
-// Вместо этого всегда продолжаем регистрацию
-console.log('Продолжаем регистрацию, пропуская проверку существования пользователя');
+if ((existingUsers as any).length > 0) {
+  const existingUser = (existingUsers as any)[0];
+  const duplicateField = existingUser.username === data.username ? 'именем пользователя' : 'email';
+  return NextResponse.json({ 
+    success: false, 
+    message: `Пользователь с таким ${duplicateField} уже существует` 
+  }, { status: 409 });
+}
 
     const password_hash = await hashPassword(data.password);
     const userInput: UserCreateInput = {

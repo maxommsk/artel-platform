@@ -11,7 +11,7 @@ interface LoginApiResponse {
 }
 
 export default function LoginPage() {
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
     const router = useRouter();
@@ -22,7 +22,7 @@ export default function LoginPage() {
             const res = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ username, password }),
             });
             const data: LoginApiResponse = await res.json();
             
@@ -53,10 +53,10 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md w-full max-w-sm">
                 <h2 className="text-2xl font-bold mb-6 text-center">Вход</h2>
                 <input
-                    type="email"
-                    placeholder="Email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                   type="text"
+                    placeholder="Имя пользователя или Email"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                     required
                     className="w-full px-4 py-2 mb-4 border rounded-lg"
                 />

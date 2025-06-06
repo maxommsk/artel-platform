@@ -9,23 +9,23 @@ const AUTH_COOKIE_NAME = 'auth_token';
 
 // --- Password Hashing (SHA-256, not bcrypt) ---
 export async function hashPassword(password: string): Promise<string> {
-  const encoded = new TextEncoder().encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
-  return Buffer.from(hashBuffer).toString('hex');
+  try {
+    return await bcrypt.hash(password, BCRYPT_ROUNDS);
+  } catch (error) {
+    console.error('Error hashing password:', error);
+    throw new Error('Failed to hash password');
+  }
 }
 
-export async function comparePasswords(password: string, hash: string): Promise<boolean> {
-  const hashed = await hashPassword(password);
-  return hashed === hash;
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  try {
+    return await bcrypt.compare(password, hash);
+  } catch (error) {
+    console.error('Error verifying password:', error);
+    return false;
+  }
 }
 
-export async function verifyPassword(plain: string, hashed: string): Promise<boolean> {
-  const enc = new TextEncoder();
-  const hashBuffer = await crypto.subtle.digest('SHA-256', enc.encode(plain));
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex === hashed;
-}
 
 // --- JWT Token Generation ---
 export async function createToken(
@@ -87,10 +87,16 @@ const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 }
 
 export function hasRole(user: any, role: string | string[]): boolean {
-  if (!user?.role) return false;
+  if (!user?.roles || !Array.isArray(user.roles)) return false;
+  
+  const userRoleNames = user.roles.map((r: any) => 
+    typeof r === 'string' ? r : r.name
+  );
+  
   if (Array.isArray(role)) {
-    return role.includes(user.role);
+    return role.some(r => userRoleNames.includes(r));
   }
-  return user.role === role;
+  return userRoleNames.includes(role);
 }
+
 

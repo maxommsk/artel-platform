@@ -125,12 +125,7 @@ export async function POST(request: NextRequest) {
     
     // В реальном приложении всегда используйте verifyPassword
     // Для тестирования можно временно использовать проверку на "password"
-    if (password === "password") {
-      passwordMatch = true;
-      console.log('Test mode: password matched with test password');
-    } else {
-      passwordMatch = await verifyPassword(password, user.password_hash as string);
-    }
+    const passwordMatch = await verifyPassword(password, user.password_hash as string);
 
     if (!passwordMatch) {
       return NextResponse.json({ success: false, message: 'Неверный логин или пароль' }, { status: 401 });
