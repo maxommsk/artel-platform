@@ -119,9 +119,6 @@ export async function POST(request: NextRequest) {
     if (!('password_hash' in user)) {
       return NextResponse.json({ success: false, message: 'Ошибка данных пользователя' }, { status: 500 });
     }
-
-    // Всегда проверяем пароль, даже в режиме мока
-    let passwordMatch = false;
     
     // В реальном приложении всегда используйте verifyPassword
     // Для тестирования можно временно использовать проверку на "password"
