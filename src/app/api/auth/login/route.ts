@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
-import { User } from '@/lib/models';
+import { sql } from '@vercel/postgres';
 
 // Определяем интерфейс для пользователя в моке
 interface MockUser {
@@ -86,87 +86,74 @@ function createMockDb() {
 
 export async function POST(request: NextRequest) {
   try {
-    interface LoginRequestBody {
-      username: string;
-      password: string;
-    }
-
-    const body = await request.json() as LoginRequestBody;
-    const { username, password } = body;
+    const { username, password } = await request.json();
 
     if (!username || !password) {
-      return NextResponse.json({ success: false, message: 'Заполните все поля' }, { status: 400 });
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Логин и пароль обязательны' 
+      }, { status: 400 });
     }
 
-    // Используем мок базы данных в продакшене или реальную базу данных в других окружениях
-    const useMockDb = process.env.DB_MOCK === 'true';
-    const db = useMockDb 
-      ? createMockDb() 
-      : (process.env as any).DB as D1Database;
+    // Ищем пользователя по username или email
+    const userResult = await sql`
+      SELECT u.*, r.name as role_name 
+      FROM users u
+      LEFT JOIN roles r ON u.role_id = r.id
+      WHERE u.username = ${username} OR u.email = ${username}
+      LIMIT 1
+    `;
 
-    if (!db) throw new Error('База данных не найдена!');
-
-    const { results } = await db.prepare(
-      'SELECT * FROM users WHERE username = ?'
-    ).bind(username).all();
-
-    const user = results?.[0];
-    if (!user) {
-      return NextResponse.json({ success: false, message: 'Неверный логин или пароль' }, { status: 401 });
+    if (userResult.rows.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Неверный логин или пароль' 
+      }, { status: 401 });
     }
 
-    // Проверяем, что у пользователя есть поле password_hash
-    if (!('password_hash' in user)) {
-      return NextResponse.json({ success: false, message: 'Ошибка данных пользователя' }, { status: 500 });
-    }
-    
-    // В реальном приложении всегда используйте verifyPassword
-    // Для тестирования можно временно использовать проверку на "password"
-    const passwordMatch = await verifyPassword(password, user.password_hash as string);
+    const user = userResult.rows[0];
+
+    // Проверяем пароль
+    const passwordMatch = await verifyPassword(password, user.password_hash);
 
     if (!passwordMatch) {
-      return NextResponse.json({ success: false, message: 'Неверный логин или пароль' }, { status: 401 });
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Неверный логин или пароль' 
+      }, { status: 401 });
     }
 
-    const { results: rolesResults } = await db.prepare(`
-      SELECT r.name FROM roles r
-      JOIN user_roles ur ON r.id = ur.role_id
-      WHERE ur.user_id = ?
-    `).bind(user.id).all();
+    // Создаем токен
+    const token = await createToken(
+      { 
+        id: user.id, 
+        username: user.username, 
+        roles: [user.role_name] 
+      },
+      [user.role_name]
+    );
 
-    // Убедимся, что все элементы в массиве имеют поле name
-    const roles: Role[] = rolesResults.filter((r): r is Role => 'name' in r);
-    const roleNames = roles.map(r => r.name);
-    
-    // Создаем токен только с полями, которые ожидает функция createToken
-    const tokenPayload = {
-      id: user.id as number,
-      username: user.username as string,
-      roles: [
-        roleNames.length > 0 
-          ? { id: 1, name: roleNames[0] as string } 
-          : { id: 1, name: 'user' }
-      ]
-    };
-    
-    const token = await createToken(tokenPayload, roleNames as string[]);
-    
+    // Устанавливаем cookie
     await setAuthCookie(token);
 
-    // Безопасно удаляем пароль из объекта пользователя
-    const userWithoutPassword = { ...user };
-    delete userWithoutPassword.password_hash;
-
-    // Добавляем email в ответ, чтобы он был доступен на клиенте
     return NextResponse.json({
       success: true,
-      message: 'Успешный вход',
-      user: userWithoutPassword,
-      token
+      message: 'Успешный вход в систему',
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role_name
+      }
     });
-  } catch (error: any) {
-    console.error('🔥 Ошибка в /api/auth/login:', error);
-    return NextResponse.json({ success: false, message: error?.message || 'Ошибка сервера' }, { status: 500 });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Ошибка при входе в систему' 
+    }, { status: 500 });
   }
 }
+
 

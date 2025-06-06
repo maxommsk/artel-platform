@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hashPassword, createToken, setAuthCookie } from '@/lib/auth';
-import { User, UserCreateInput } from '@/lib/models';
-import { createMockDb } from '@/lib/mocks/mockDb';
+import { hashPassword } from '@/lib/auth';
+import { sql } from '@vercel/postgres';
+import { initDatabase } from '@/lib/db-postgres';
 
 interface RegisterData {
   username: string;
@@ -15,122 +15,61 @@ interface RegisterData {
 
 export async function POST(request: NextRequest) {
   try {
-    const data = await request.json() as {
-  username: string;
-  email: string;
-  password: string;
-  phone?: string;
-  first_name?: string;
-  last_name?: string;
-  middle_name?: string;
-};
-    console.log('📥 Полученные данные:', data);
+    // Инициализируем базу данных
+    await initDatabase();
 
-    if (!data.username || !data.email || !data.password) {
-      return NextResponse.json({ success: false, message: 'Не указаны обязательные поля' }, { status: 400 });
+    const data = await request.json();
+    const { username, email, password } = data;
+
+    if (!username || !email || !password) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Все поля обязательны для заполнения' 
+      }, { status: 400 });
     }
 
-    // Используем мок базы данных в продакшене или реальную базу данных в других окружениях
-    const useMockDb = process.env.DB_MOCK === 'true';
-    const db = useMockDb 
-      ? createMockDb() 
-      : (process.env as any).DB as D1Database;
+    // Проверяем существование пользователя
+    const existingUsers = await sql`
+      SELECT id FROM users 
+      WHERE username = ${username} OR email = ${email}
+      LIMIT 1
+    `;
 
-    if (!db) throw new Error('База данных не найдена!');
-
-    const { results: existingUsers } = await db.prepare(
-  'SELECT * FROM users WHERE username = ? OR email = ?'
-).bind(data.username, data.email).all();
-
-console.log('Проверка существования пользователя:', { 
-  existingUsers, 
-  length: (existingUsers as any).length,
-  isArray: Array.isArray(existingUsers),
-  type: typeof existingUsers
-});
-
-if ((existingUsers as any).length > 0) {
-  const existingUser = (existingUsers as any)[0];
-  const duplicateField = existingUser.username === data.username ? 'именем пользователя' : 'email';
-  return NextResponse.json({ 
-    success: false, 
-    message: `Пользователь с таким ${duplicateField} уже существует` 
-  }, { status: 409 });
-}
-
-    const password_hash = await hashPassword(data.password);
-    const userInput: UserCreateInput = {
-      username: data.username,
-      email: data.email,
-      password_hash,
-      phone: data.phone,
-      first_name: data.first_name,
-      last_name: data.last_name,
-      middle_name: data.middle_name,
-    };
-
-    const insertUser = await db.prepare(`
-      INSERT INTO users (username, email, password_hash, phone, first_name, last_name, middle_name)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      userInput.username,
-      userInput.email,
-      userInput.password_hash,
-      userInput.phone || null,
-      userInput.first_name || null,
-      userInput.last_name || null,
-      userInput.middle_name || null
-    ).run();
-
-    const userId = insertUser.meta?.last_row_id;
-
-    await db.prepare(`
-      INSERT INTO user_roles (user_id, role_id)
-      SELECT ?, id FROM roles WHERE name = 'user'
-    `).bind(userId).run();
-
-    const { results: userRows } = await db.prepare(
-      'SELECT * FROM users WHERE id = ?'
-    ).bind(userId).all();
-
-    const newUser = (userRows as any)[0];
-    if (!newUser) {
-      return NextResponse.json({ success: false, message: 'Ошибка при создании пользователя' }, { status: 500 });
+    if (existingUsers.rows.length > 0) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Пользователь с таким именем или email уже существует' 
+      }, { status: 409 });
     }
 
-    const { results: roles } = await db.prepare(`
-      SELECT r.name FROM roles r
-      JOIN user_roles ur ON r.id = ur.role_id
-      WHERE ur.user_id = ?
-    `).bind(userId).all();
+    // Хешируем пароль
+    const passwordHash = await hashPassword(password);
 
-    const roleNames = roles.map(r => (r as any).name);
-    const token = await createToken({ 
-      id: newUser.id as number, 
-      username: newUser.username as string, 
-      roles: [
-        roleNames.length > 0 
-          ? { id: 1, name: roleNames[0] as string } 
-          : { id: 1, name: 'user' }
-      ]
-    }, roleNames as string[]);
- 
-    setAuthCookie(token);
+    // Получаем ID роли пользователя
+    const userRole = await sql`
+      SELECT id FROM roles WHERE name = 'user' LIMIT 1
+    `;
 
-    const { password_hash: _, ...userWithoutPassword } = newUser as any;
+    // Создаем пользователя
+    const newUser = await sql`
+      INSERT INTO users (username, email, password_hash, role_id)
+      VALUES (${username}, ${email}, ${passwordHash}, ${userRole.rows[0].id})
+      RETURNING id, username, email
+    `;
 
     return NextResponse.json({
       success: true,
-      message: 'Регистрация успешно завершена',
-      user: userWithoutPassword,
-      token
+      message: 'Пользователь успешно зарегистрирован',
+      user: newUser.rows[0]
     });
-  } catch (error: any) {
-    console.error('🔥 Ошибка в /api/auth/register:', error);
-    return NextResponse.json({
-      success: false,
-      message: error?.message || 'Что-то пошло не так',
-    }, { status: 400 });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Ошибка при регистрации пользователя' 
+    }, { status: 500 });
   }
 }
+
 
