@@ -66,19 +66,9 @@ export async function setAuthCookie(token: string): Promise<void> {
   });
 }
 
-export function clearAuthCookie() {
-  // Возвращает пустой куки (по твоей логике)
-  return {
-    name: 'token',
-    value: '',
-    options: {
-      httpOnly: true,
-      secure: true,
-      path: '/',
-      sameSite: 'strict',
-      maxAge: 0,
-    }
-  };
+export async function clearAuthCookie(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(AUTH_COOKIE_NAME);
 }
 
 export async function getCurrentUser(): Promise<any | null> {
