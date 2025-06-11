@@ -47,7 +47,7 @@
 
 3.  **Настройте переменные окружения:**
     Создайте файл `.env.local` и заполните его необходимыми значениями (см. `.env.example`, если он есть):
-    *   `DATABASE_URL`: Строка подключения к базе данных.
+    *   `DATABASE_URL`: Строка подключения к базе данных. Например для PostgreSQL: `postgresql://user:password@host:5432/dbname`
     *   `JWT_SECRET`: Секретный ключ для JWT.
     *   `BLOCKCHAIN_RPC_URL`: URL RPC-узла блокчейна.
     *   `ADMIN_PRIVATE_KEY`: Приватный ключ кошелька администратора.
