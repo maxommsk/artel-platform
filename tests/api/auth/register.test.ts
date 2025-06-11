@@ -1,10 +1,19 @@
 import request from 'supertest';
-import { createServer } from 'http';
+import { createServer, Server } from 'http';
 import app from '@/app_test_server'; // убедись что такой файл создан
+
+let server: Server;
+
+beforeEach(() => {
+  server = createServer(app);
+});
+
+afterEach((done) => {
+  server.close(done);
+});
 
 describe('POST /api/auth/register', () => {
   it('should return 400 if missing fields', async () => {
-    const server = createServer(app);
     const response = await request(server)
       .post('/api/auth/register')
       .send({ username: '', email: '', password: '' });

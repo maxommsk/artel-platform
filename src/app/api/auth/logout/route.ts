@@ -5,7 +5,7 @@ import { clearAuthCookie } from '@/lib/auth';
 export async function POST(request: NextRequest) {
   try {
     // Очистка куки с токеном аутентификации
-    clearAuthCookie();
+    await clearAuthCookie();
     
     return NextResponse.json({
       success: true,

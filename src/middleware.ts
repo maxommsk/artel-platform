@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser, hasRole } from '@/lib/auth';
 
 // Middleware для защиты маршрутов
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   // Получение текущего пользователя из токена
-  const user = getCurrentUser();
+  const user = await getCurrentUser();
   
   // Проверка аутентификации
   if (!user) {
