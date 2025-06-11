@@ -11,7 +11,7 @@ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'znk-artel
 const TOKEN_EXPIRATION_SECONDS = 60 * 60 * 24 * 7; // 7 days
 const AUTH_COOKIE_NAME = 'auth_token';
 
-// --- Password Hashing (SHA-256, not bcrypt) ---
+// --- Password Hashing using bcrypt ---
 export async function hashPassword(password: string): Promise<string> {
   try {
     return await bcrypt.hash(password, BCRYPT_ROUNDS);
