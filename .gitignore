@@ -1,19 +1,18 @@
+# Node dependencies
 node_modules/
+
+# Build outputs
 .next/
 .open-next/
 .output/
 .vercel/
-TEst.zip
-*.zip
-*.tar.gz
-*.log
+
+# Environment files
 .env.local
-# Большие файлы
+
+# Logs
+*.log
+
+# Archives
 *.zip
 *.tar.gz
-TEst.zip
-# Директории сборки
-.next/
-.open-next/
-.output/
-.vercel/
