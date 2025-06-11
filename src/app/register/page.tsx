@@ -27,7 +27,7 @@ export default function RegisterPage() {
         if (res.ok) {
             setMessage('✅ Регистрация успешна!');
         } else {
-            setMessage(`❌ Ошибка: ${data.error || 'Что-то пошло не так'}`);
+            setMessage(`❌ Ошибка: ${data.message || data.error || 'Что-то пошло не так'}`);
         }
     };
 
