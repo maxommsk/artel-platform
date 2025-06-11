@@ -48,7 +48,7 @@
     Создайте файл `.env.local` и заполните его необходимыми значениями (см. `.env.example`, если он есть):
 
     * `DATABASE_URL` (или `POSTGRES_URL` — оба варианта поддерживаются): строка подключения к базе данных, например:  
-      `postgres://user:password@localhost:5432/artel`
+      `postgresql://user:password@localhost:5432/artel`
     * `JWT_SECRET`: Секретный ключ для JWT.
     * `BLOCKCHAIN_RPC_URL`: URL RPC-узла блокчейна.
     * `ADMIN_PRIVATE_KEY`: Приватный ключ кошелька администратора.
@@ -56,7 +56,7 @@
     * `IPFS_API_URL`: URL API вашего IPFS-узла.
     * `PAYMENT_GATEWAY_KEY`: Ключ API платежного шлюза.
     * `EMAIL_SERVICE_KEY`: Ключ API email-сервиса.
-    * ...
+    * ...\
 
 4.  **Примените миграции базы данных:**
     *   **Cloudflare D1:**
