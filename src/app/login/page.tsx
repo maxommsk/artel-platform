@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 
 interface LoginApiResponse {
   success: boolean;
+  message?: string;
   error?: string;
   token?: string;
   user?: any;
@@ -40,7 +41,7 @@ export default function LoginPage() {
                 // Перенаправление на дашборд
                 router.push('/dashboard');
             } else {
-                setMessage(`❌ Ошибка: ${data.error || 'Что-то пошло не так'}`);
+                setMessage(`❌ Ошибка: ${data.message || data.error || 'Что-то пошло не так'}`);
             }
         } catch (error) {
             setMessage('❌ Ошибка: Не удалось выполнить запрос');

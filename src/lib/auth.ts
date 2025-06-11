@@ -1,15 +1,17 @@
-const jose = require('jose');
-const { SignJWT, jwtVerify } = jose;
 import { cookies } from 'next/headers';
 import type { User } from './models';
-const bcrypt = require('bcryptjs');
+import bcrypt from 'bcryptjs';
+
+async function getJose() {
+  return await import('jose');
+}
 const BCRYPT_ROUNDS = 12;
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'znk-artel-secret-key');
 const TOKEN_EXPIRATION_SECONDS = 60 * 60 * 24 * 7; // 7 days
 const AUTH_COOKIE_NAME = 'auth_token';
 
-// --- Password Hashing (SHA-256, not bcrypt) ---
+// --- Password Hashing using bcrypt ---
 export async function hashPassword(password: string): Promise<string> {
   try {
     return await bcrypt.hash(password, BCRYPT_ROUNDS);
@@ -34,6 +36,7 @@ export async function createToken(
   user: Pick<User, 'id' | 'username' | 'roles'>,
   roles: string[]
 ): Promise<string> {
+  const { SignJWT } = await getJose();
   return await new SignJWT({
   id: user.id,
   username: user.username,
@@ -47,6 +50,7 @@ export async function createToken(
 
 export async function verifyToken(token: string): Promise<any> {
   try {
+    const { jwtVerify } = await getJose();
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return payload;
   } catch {
@@ -66,19 +70,9 @@ export async function setAuthCookie(token: string): Promise<void> {
   });
 }
 
-export function clearAuthCookie() {
-  // Возвращает пустой куки (по твоей логике)
-  return {
-    name: 'token',
-    value: '',
-    options: {
-      httpOnly: true,
-      secure: true,
-      path: '/',
-      sameSite: 'strict',
-      maxAge: 0,
-    }
-  };
+export async function clearAuthCookie(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(AUTH_COOKIE_NAME);
 }
 
 export async function getCurrentUser(): Promise<any | null> {

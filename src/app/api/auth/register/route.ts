@@ -14,18 +14,19 @@ interface RegisterData {
 
 export async function POST(request: NextRequest) {
   try {
-    // Инициализируем базу данных
-    await initDatabase();
-
     const data = await request.json() as { username: string; email: string; password: string };
     const { username, email, password } = data;
 
     if (!username || !email || !password) {
-      return NextResponse.json({ 
-        success: false, 
-        message: 'Все поля обязательны для заполнения' 
-      }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: 'Все поля обязательны для заполнения' },
+        { status: 400 }
+      );
     }
+
+    // Инициализируем базу данных
+    await initDatabase();
+
 
     // Проверяем существование пользователя
     const existingUsers = await findUserByUsernameOrEmail(username, email);
