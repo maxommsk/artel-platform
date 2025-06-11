@@ -44,11 +44,11 @@
     npm install
     # или pnpm install / yarn install
     ```
-
 3.  **Настройте переменные окружения:**
     Создайте файл `.env.local` и заполните его необходимыми значениями (см. `.env.example`, если он есть):
-    
-    * `DATABASE_URL` (или `POSTGRES_URL` — оба варианта поддерживаются): Строка подключения к базе данных.
+
+    * `DATABASE_URL` (или `POSTGRES_URL` — оба варианта поддерживаются): строка подключения к базе данных, например:  
+      `postgres://user:password@localhost:5432/artel`
     * `JWT_SECRET`: Секретный ключ для JWT.
     * `BLOCKCHAIN_RPC_URL`: URL RPC-узла блокчейна.
     * `ADMIN_PRIVATE_KEY`: Приватный ключ кошелька администратора.
@@ -59,7 +59,7 @@
     * ...
 
 4.  **Примените миграции базы данных:**
-    *   Для Cloudflare D1 (если используется):
+    *   **Cloudflare D1:**
         ```bash
         # Установите wrangler: npm install -g wrangler
         # Сброс (если нужно): rm -rf .wrangler/state/v3
@@ -67,10 +67,9 @@
         # Или для применения новых миграций:
         # wrangler d1 migrations apply DB --local
         ```
-    *   Для PostgreSQL (если используется Prisma или другой ORM):
-        ```bash
-        npx prisma migrate dev
-        ```
+    *   **PostgreSQL:** запустите SQL-файлы из папки `migrations` командой
+        `psql $POSTGRES_URL -f migrations/0001_initial.sql` или используйте
+        подходящий инструмент миграций.
 
 5.  **Запустите сервер разработки:**
     ```bash
