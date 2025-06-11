@@ -1,4 +1,3 @@
-cat > src/lib/db-neon.ts << 'EOF'
 import { Pool } from 'pg';
 
 const pool = new Pool({
@@ -108,5 +107,4 @@ export async function getRoleByName(roleName: string) {
     client.release();
   }
 }
-EOF
 
