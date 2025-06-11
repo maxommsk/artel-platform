@@ -1,8 +1,10 @@
-const jose = require('jose');
-const { SignJWT, jwtVerify } = jose;
 import { cookies } from 'next/headers';
 import type { User } from './models';
-const bcrypt = require('bcryptjs');
+import bcrypt from 'bcryptjs';
+
+async function getJose() {
+  return await import('jose');
+}
 const BCRYPT_ROUNDS = 12;
 
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'znk-artel-secret-key');
@@ -34,6 +36,7 @@ export async function createToken(
   user: Pick<User, 'id' | 'username' | 'roles'>,
   roles: string[]
 ): Promise<string> {
+  const { SignJWT } = await getJose();
   return await new SignJWT({
   id: user.id,
   username: user.username,
@@ -47,6 +50,7 @@ export async function createToken(
 
 export async function verifyToken(token: string): Promise<any> {
   try {
+    const { jwtVerify } = await getJose();
     const { payload } = await jwtVerify(token, JWT_SECRET);
     return payload;
   } catch {
