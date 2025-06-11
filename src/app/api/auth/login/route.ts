@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
-import { sql } from '@vercel/postgres';
+import { findUserWithRole } from '@/lib/db-neon';
 
 // Определяем интерфейс для пользователя в моке
 interface MockUser {
@@ -87,8 +87,7 @@ function createMockDb() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-     const { username, password } = body as { username: string; password: string };
-
+    const { username, password } = body as { username: string; password: string };
 
     if (!username || !password) {
       return NextResponse.json({ 
@@ -98,22 +97,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Ищем пользователя по username или email
-    const userResult = await sql`
-      SELECT u.*, r.name as role_name 
-      FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
-      WHERE u.username = ${username} OR u.email = ${username}
-      LIMIT 1
-    `;
+    const userResult = await findUserWithRole(username);
 
-    if (userResult.rows.length === 0) {
+    if (userResult.length === 0) {
       return NextResponse.json({ 
         success: false, 
         message: 'Неверный логин или пароль' 
       }, { status: 401 });
     }
 
-    const user = userResult.rows[0];
+    const user = userResult[0];
 
     // Проверяем пароль
     const passwordMatch = await verifyPassword(password, user.password_hash);
@@ -157,5 +150,4 @@ export async function POST(request: NextRequest) {
     }, { status: 500 });
   }
 }
-
 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hashPassword } from '@/lib/auth';
-import { sql } from '@vercel/postgres';
-import { initDatabase } from '@/lib/db-postgres';
+import { initDatabase, createUser, findUserByUsernameOrEmail, getRoleByName } from '@/lib/db-neon';
 
 interface RegisterData {
   username: string;
@@ -29,16 +28,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Проверяем существование пользователя
-    const existingUsers = await sql`
-      SELECT id FROM users 
-      WHERE username = ${username} OR email = ${email}
-      LIMIT 1
-    `;
+    const existingUsers = await findUserByUsernameOrEmail(username, email);
 
-    if (existingUsers.rows.length > 0) {
+    if (existingUsers.length > 0) {
+      const existingUser = existingUsers[0];
+      const duplicateField = existingUser.username === username ? 'именем пользователя' : 'email';
       return NextResponse.json({ 
         success: false, 
-        message: 'Пользователь с таким именем или email уже существует' 
+        message: `Пользователь с таким ${duplicateField} уже существует` 
       }, { status: 409 });
     }
 
@@ -46,21 +43,24 @@ export async function POST(request: NextRequest) {
     const passwordHash = await hashPassword(password);
 
     // Получаем ID роли пользователя
-    const userRole = await sql`
-      SELECT id FROM roles WHERE name = 'user' LIMIT 1
-    `;
+    const userRole = await getRoleByName('user');
 
     // Создаем пользователя
-    const newUser = await sql`
-      INSERT INTO users (username, email, password_hash, role_id)
-      VALUES (${username}, ${email}, ${passwordHash}, ${userRole.rows[0].id})
-      RETURNING id, username, email
-    `;
+    const newUser = await createUser({
+      username,
+      email,
+      password_hash: passwordHash,
+      role_id: userRole.id
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Пользователь успешно зарегистрирован',
-      user: newUser.rows[0]
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email
+      }
     });
 
   } catch (error) {
@@ -71,5 +71,4 @@ export async function POST(request: NextRequest) {
     }, { status: 500 });
   }
 }
-
 
