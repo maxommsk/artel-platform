@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
+import { pool, initDatabase } from '@/lib/db-neon';
 
 // Интерфейс для типизации тела запроса
 interface ProfileUpdateRequest {
@@ -80,44 +81,105 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as ProfileUpdateRequest;
     const { first_name, last_name, middle_name, phone } = body;
 
-    // Используем мок базы данных в продакшене или реальную базу данных в других окружениях
+    // В режиме разработки/тестирования может использоваться мок
     const useMockDb = process.env.DB_MOCK === 'true';
-    const db = useMockDb 
-      ? createMockDb() 
-      : (process.env as any).DB as D1Database;
+    const hasD1 = Boolean((process.env as any).DB);
 
-    if (!db) throw new Error('База данных не найдена!');
+    // Проверяем, определена ли база для Cloudflare D1
+    const db = hasD1 ? (process.env as any).DB as D1Database : null;
 
-    // Проверяем существование пользователя
-    const { results } = await db.prepare(
-      'SELECT * FROM users WHERE id = ?'
-    ).bind(userId).all();
-
-    const user = results?.[0] as UserRecord;
-    if (!user) {
-      return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+    if (!useMockDb && !hasD1) {
+      // Если D1 недоступна, используем PostgreSQL через pool
+      await initDatabase();
     }
 
-    // Обновляем профиль пользователя
-    await db.prepare(`
-      UPDATE users 
-      SET first_name = ?, last_name = ?, middle_name = ?, phone = ?, updated_at = ?
-      WHERE id = ?
-    `).bind(
-      first_name || null,
-      last_name || null,
-      middle_name || null,
-      phone || null,
-      new Date().toISOString(),
-      userId
-    ).run();
+    let updatedUser: UserRecord | undefined;
 
-    // Получаем обновленные данные пользователя
-    const { results: updatedResults } = await db.prepare(
-      'SELECT * FROM users WHERE id = ?'
-    ).bind(userId).all();
+    if (useMockDb) {
+      const dbMock = createMockDb();
 
-    const updatedUser = updatedResults?.[0] as UserRecord;
+      const { results } = await dbMock.prepare(
+        'SELECT * FROM users WHERE id = ?'
+      ).bind(userId).all();
+      const user = results?.[0] as UserRecord;
+      if (!user) {
+        return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+      }
+
+      await dbMock.prepare(`
+        UPDATE users
+        SET first_name = ?, last_name = ?, middle_name = ?, phone = ?, updated_at = ?
+        WHERE id = ?
+      `).bind(
+        first_name || null,
+        last_name || null,
+        middle_name || null,
+        phone || null,
+        new Date().toISOString(),
+        userId
+      ).run();
+
+      const { results: updatedResults } = await dbMock.prepare(
+        'SELECT * FROM users WHERE id = ?'
+      ).bind(userId).all();
+      updatedUser = updatedResults?.[0] as UserRecord;
+    } else if (hasD1 && db) {
+      const { results } = await db.prepare(
+        'SELECT * FROM users WHERE id = ?'
+      ).bind(userId).all();
+      const user = results?.[0] as UserRecord;
+      if (!user) {
+        return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+      }
+
+      await db.prepare(`
+        UPDATE users
+        SET first_name = ?, last_name = ?, middle_name = ?, phone = ?, updated_at = ?
+        WHERE id = ?
+      `).bind(
+        first_name || null,
+        last_name || null,
+        middle_name || null,
+        phone || null,
+        new Date().toISOString(),
+        userId
+      ).run();
+
+      const { results: updatedResults } = await db.prepare(
+        'SELECT * FROM users WHERE id = ?'
+      ).bind(userId).all();
+      updatedUser = updatedResults?.[0] as UserRecord;
+    } else {
+      // Используем PostgreSQL
+      const { rows } = await pool.query<UserRecord>(
+        'SELECT * FROM users WHERE id = $1',
+        [userId]
+      );
+      const user = rows?.[0];
+      if (!user) {
+        return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
+      }
+
+      await pool.query(
+        `UPDATE users
+         SET first_name = $1, last_name = $2, middle_name = $3, phone = $4, updated_at = NOW()
+         WHERE id = $5`,
+        [
+          first_name || null,
+          last_name || null,
+          middle_name || null,
+          phone || null,
+          userId,
+        ]
+      );
+
+      const { rows: updatedRows } = await pool.query<UserRecord>(
+        'SELECT * FROM users WHERE id = $1',
+        [userId]
+      );
+      updatedUser = updatedRows?.[0];
+    }
+
     if (!updatedUser) {
       return NextResponse.json({ success: false, message: 'Ошибка при получении обновленных данных' }, { status: 500 });
     }
@@ -140,4 +202,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message: error?.message || 'Ошибка сервера' }, { status: 500 });
   }
 }
+
 
