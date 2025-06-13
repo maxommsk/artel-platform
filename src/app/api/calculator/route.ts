@@ -34,6 +34,14 @@ const DEFAULT_TARIFFS: Record<number, {
   },
 };
 
+interface Tariff {
+  name: string;
+  initial_payment_percent: number;
+  monthly_payment_percent: number;
+  max_term_months: number;
+  acceleration_coefficient: number;
+}
+
 interface CalculatorInput {
   tariff_id: number;
   property_price: number;
@@ -52,13 +60,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    let tariff: {
-      name: string;
-      initial_payment_percent: number;
-      monthly_payment_percent: number;
-      max_term_months: number;
-      acceleration_coefficient: number;
-    } | null = null;
+    let tariff: Tariff | null = null;
 
     if (db) {
       try {
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
           .bind(data.tariff_id)
           .all();
         if (tariffs.length > 0) {
-          tariff = tariffs[0] as typeof tariff;
+          tariff = tariffs[0] as unknown as Tariff;
         }
       } catch (err) {
         console.error("DB error while fetching tariff:", err);
