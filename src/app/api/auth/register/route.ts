@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hashPassword } from '@/lib/auth';
-import { initDatabase, createUser, findUserByUsernameOrEmail, getRoleByName } from '@/lib/db-neon';
+import { pool } from '@/lib/db-neon';
+import {
+  hashPassword,
+  createToken,
+  setAuthCookie
+} from '@/lib/auth';
+import type { User, UserCreateInput } from '@/lib/models';
 
 interface RegisterData {
   username: string;
@@ -14,62 +19,95 @@ interface RegisterData {
 
 export async function POST(request: NextRequest) {
   try {
-    const data = await request.json() as { username: string; email: string; password: string };
-    const { username, email, password } = data;
+    const data: RegisterData = await request.json();
 
-    if (!username || !email || !password) {
+    if (!data.username || !data.email || !data.password) {
       return NextResponse.json(
         { success: false, message: 'Все поля обязательны для заполнения' },
         { status: 400 }
       );
     }
 
-    // Инициализируем базу данных
-    await initDatabase();
+    const { rows: existing } = await pool.query<User>(
+      'SELECT * FROM users WHERE username = $1 OR email = $2',
+      [data.username, data.email]
+    );
 
-
-    // Проверяем существование пользователя
-    const existingUsers = await findUserByUsernameOrEmail(username, email);
-
-    if (existingUsers.length > 0) {
-      const existingUser = existingUsers[0];
-      const duplicateField = existingUser.username === username ? 'именем пользователя' : 'email';
-      return NextResponse.json({ 
-        success: false, 
-        message: `Пользователь с таким ${duplicateField} уже существует` 
-      }, { status: 409 });
+    if (existing.length > 0) {
+      return NextResponse.json(
+        { success: false, message: 'Пользователь с таким именем или email уже существует' },
+        { status: 409 }
+      );
     }
 
-    // Хешируем пароль
-    const passwordHash = await hashPassword(password);
+    const password_hash = await hashPassword(data.password);
 
-    // Получаем ID роли пользователя
-    const userRole = await getRoleByName('user');
+    const userInput: UserCreateInput = {
+      username: data.username,
+      email: data.email,
+      password_hash,
+      phone: data.phone,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      middle_name: data.middle_name
+    };
 
-    // Создаем пользователя
-    const newUser = await createUser({
-      username,
-      email,
-      password_hash: passwordHash,
-      role_id: userRole.id
-    });
+    const { rows: inserted } = await pool.query<{ id: number }>(
+      `INSERT INTO users (username, email, password_hash, phone, first_name, last_name, middle_name)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING id`,
+      [
+        userInput.username,
+        userInput.email,
+        userInput.password_hash,
+        userInput.phone || null,
+        userInput.first_name || null,
+        userInput.last_name || null,
+        userInput.middle_name || null
+      ]
+    );
+    const userId = inserted[0].id;
+
+    await pool.query(
+      `INSERT INTO user_roles (user_id, role_id)
+       SELECT $1, id FROM roles WHERE name = 'user'`,
+      [userId]
+    );
+
+    const { rows } = await pool.query<User>(
+      'SELECT * FROM users WHERE id = $1',
+      [userId]
+    );
+
+    const newUser = rows[0];
+    if (!newUser) {
+      return NextResponse.json({ success: false, message: 'Ошибка при создании пользователя' }, { status: 500 });
+    }
+
+    const { rows: roleRows } = await pool.query<{ name: string }>(
+      `SELECT r.name FROM roles r
+         JOIN user_roles ur ON r.id = ur.role_id
+         WHERE ur.user_id = $1`,
+      [userId]
+    );
+
+    const roleNames = roleRows.map(r => r.name);
+    const token = await createToken(newUser, roleNames);
+    await setAuthCookie(token);
+
+    const { password_hash: _ph, ...userWithoutPassword } = newUser as any;
 
     return NextResponse.json({
       success: true,
       message: 'Пользователь успешно зарегистрирован',
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email
-      }
+      user: userWithoutPassword,
+      token
     });
-
   } catch (error) {
     console.error('Registration error:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: 'Ошибка при регистрации пользователя' 
-    }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: 'Ошибка при регистрации пользователя' },
+      { status: 500 }
+    );
   }
 }
-
