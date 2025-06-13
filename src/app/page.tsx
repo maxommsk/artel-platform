@@ -3,13 +3,35 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 
+interface Calculation {
+  tariff_id: number;
+  tariff_name: string;
+  property_price: number;
+  initial_payment_percent: number;
+  initial_payment_amount: number;
+  monthly_payment_percent: number;
+  monthly_payment_amount: number;
+  base_term_months: number;
+  new_members_count: number;
+  acceleration_coefficient: number;
+  accelerated_term_months: number;
+  saved_months: number;
+  saved_percent: number;
+  id: number | null;
+}
+
+interface CalculatorResponse {
+  success: boolean;
+  calculation?: Calculation;
+}
+
 export default function Home() {
   const [formData, setFormData] = useState({
     tariff_id: '',
     property_price: '',
     new_members_count: '',
   });
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Calculation | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -24,8 +46,8 @@ export default function Home() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(formData),
     });
-    const data = await res.json();
-    setResult(data.calculation || null);
+    const data: CalculatorResponse = await res.json();
+    setResult(data.calculation ?? null);
   };
 
   return (
@@ -177,7 +199,7 @@ export default function Home() {
                   <span>Срок рассрочки до 5 лет</span>
                 </li>
                 <li className="flex items-start">
-                                    <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                   </svg>
                   <span>Ежемесячный платеж 1.0%</span>
