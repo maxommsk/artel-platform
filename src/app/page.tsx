@@ -52,8 +52,8 @@ export default function Home() {
         }),
       });
       if (!res.ok) {
-        const err = await res.json();
-        alert(err.message || 'Ошибка расчета');
+        const errData: { message?: string } = await res.json();
+        alert(errData.message || 'Ошибка расчета');
         return;
       }
       const data: CalculatorResponse = await res.json();
@@ -212,7 +212,7 @@ export default function Home() {
                   <span>Срок рассрочки до 5 лет</span>
                 </li>
                 <li className="flex items-start">
-                                      <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                   </svg>
                   <span>Ежемесячный платеж 1.0%</span>
