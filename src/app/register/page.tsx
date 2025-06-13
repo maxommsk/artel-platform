@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
-
+import { useRouter } from 'next/navigation';
 interface RegisterApiResponse {
   success: boolean;      // Или другое поле, указывающее на успех
   message?: string;     // Опциональное сообщение от API
@@ -15,7 +15,7 @@ export default function RegisterPage() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
-
+    const router = useRouter();
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const res = await fetch('/api/auth/register', {
@@ -26,6 +26,7 @@ export default function RegisterPage() {
         const data: RegisterApiResponse = await res.json();
         if (res.ok) {
             setMessage('✅ Регистрация успешна!');
+                      router.push('/login');
         } else {
             setMessage(`❌ Ошибка: ${data.message || data.error || 'Что-то пошло не так'}`);
         }
