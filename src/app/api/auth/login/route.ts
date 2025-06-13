@@ -61,7 +61,7 @@ function createMockDb() {
             if (user) {
               console.log(`User found: ${user.username}`);
               return { results: [user] };
-                       } else {
+                               } else {
               console.log('User not found');
               return { results: [] };
             }
@@ -146,3 +146,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message: 'Ошибка при входе в систему' }, { status: 500 });
   }
 }
+
