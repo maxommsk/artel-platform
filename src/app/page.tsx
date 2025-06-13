@@ -1,6 +1,33 @@
+'use client'
+
+import React, { useState } from 'react';
 import Link from 'next/link';
 
 export default function Home() {
+  const [formData, setFormData] = useState({
+    tariff_id: '',
+    property_price: '',
+    new_members_count: '',
+  });
+  const [result, setResult] = useState<any>(null);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const res = await fetch('/api/calculator', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    });
+    const data = await res.json();
+    setResult(data.calculation || null);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
       {/* Навигационная панель */}
@@ -150,7 +177,7 @@ export default function Home() {
                   <span>Срок рассрочки до 5 лет</span>
                 </li>
                 <li className="flex items-start">
-                  <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                   </svg>
                   <span>Ежемесячный платеж 1.0%</span>
@@ -175,63 +202,81 @@ export default function Home() {
       <div id="calculator" className="py-16 bg-white">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Калькулятор точки ускорения</h2>
-          
+
           <div className="max-w-3xl mx-auto bg-blue-50 rounded-lg p-8">
             <p className="text-gray-700 mb-6">
               Рассчитайте, как вступление новых пайщиков в ЖНК "Артель" сократит срок ожидания вашей недвижимости.
             </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">Тарифный план</label>
-                <select className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <option value="1">Стандарт (20%)</option>
-                  <option value="2">Оптимальный (30%)</option>
-                  <option value="3">Ускоренный (50%)</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">Стоимость недвижимости</label>
-                <input 
-                  type="number" 
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="3 000 000"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">Количество новых пайщиков</label>
-                <input 
-                  type="number" 
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="10"
-                />
-              </div>
-              
-              <div className="flex items-end">
-                <button className="w-full py-2 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition">
-                  Рассчитать
-                </button>
-              </div>
-            </div>
-            
-            <div className="bg-white p-4 rounded-lg border">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+            <form onSubmit={handleSubmit}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                  <p className="text-gray-600">Базовый срок ожидания:</p>
-                  <p className="font-medium">60 месяцев</p>
+                  <label className="block text-gray-700 font-medium mb-2">Тарифный план</label>
+                  <select
+                    name="tariff_id"
+                    value={formData.tariff_id}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Выберите тариф</option>
+                    <option value="1">Стандарт (20%)</option>
+                    <option value="2">Оптимальный (30%)</option>
+                    <option value="3">Ускоренный (50%)</option>
+                  </select>
                 </div>
+
                 <div>
-                  <p className="text-gray-600">Ускоренный срок ожидания:</p>
-                  <p className="font-medium text-green-600">48 месяцев</p>
+                  <label className="block text-gray-700 font-medium mb-2">Стоимость недвижимости</label>
+                  <input
+                    type="number"
+                    name="property_price"
+                    value={formData.property_price}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="3 000 000"
+                    required
+                  />
                 </div>
+
                 <div>
-                  <p className="text-gray-600">Экономия времени:</p>
-                  <p className="font-medium text-green-600">12 месяцев (20%)</p>
+                  <label className="block text-gray-700 font-medium mb-2">Количество новых пайщиков</label>
+                  <input
+                    type="number"
+                    name="new_members_count"
+                    value={formData.new_members_count}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="10"
+                    required
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full py-2 px-4 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition"
+                  >
+                    Рассчитать
+                  </button>
                 </div>
               </div>
-            </div>
+            </form>
+
+            {result && (
+              <div className="bg-white p-4 rounded-lg border mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-gray-600">Первоначальный взнос:</p>
+                    <p className="font-medium">{result.initial_payment_amount}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">Ежемесячный платёж:</p>
+                    <p className="font-medium text-green-600">{result.monthly_payment_amount}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
