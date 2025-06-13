@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pool } from '@/lib/db-neon';
+import { pool, initDatabase } from '@/lib/db-neon';
 import {
   hashPassword,
   createToken,
@@ -19,6 +19,7 @@ interface RegisterData {
 
 export async function POST(request: NextRequest) {
   try {
+    await initDatabase();
     const data: RegisterData = await request.json();
 
     if (!data.username || !data.email || !data.password) {
