@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
-import { pool } from '@/lib/db-neon';
+import { pool, initDatabase } from '@/lib/db-neon';
 
 // Определяем интерфейс для пользователя в моке
 interface MockUser {
@@ -61,7 +61,7 @@ function createMockDb() {
             if (user) {
               console.log(`User found: ${user.username}`);
               return { results: [user] };
-                               } else {
+                              } else {
               console.log('User not found');
               return { results: [] };
             }
@@ -86,6 +86,7 @@ function createMockDb() {
 
 export async function POST(request: NextRequest) {
   try {
+    await initDatabase();
     const { username, password } = await request.json() as { username: string; password: string };
 
     const useMockDb = process.env.DB_MOCK === 'true';
