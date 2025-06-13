@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPassword, createToken, setAuthCookie } from '@/lib/auth';
-import { pool } from '@/lib/db-neon';
+import { findUserWithRole } from '@/lib/db-neon';
 
 // Определяем интерфейс для пользователя в моке
 interface MockUser {
@@ -26,33 +26,41 @@ function createMockDb() {
   const mockUsers: MockUser[] = [
     { 
       id: 1, 
-      username: 'admin',
-      email: 'admin@example.com',
-      password_hash: '$2b$10$example_hash_here',
-      created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      username: 'maxommsk@gmail.com', 
+      email: 'maxommsk@gmail.com',
+      password_hash: '$2a$10$XQxBGI0Vz8mGUx.j3UZBxeKFH9CCzZpHJoB1aP5RgXJJcBpHwFp2K', // хеш для пароля "password"
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    },
+    { 
+      id: 2, 
+      username: 'maxi_trade@mail.ru', 
+      email: 'maxi_trade@mail.ru',
+      password_hash: '$2a$10$XQxBGI0Vz8mGUx.j3UZBxeKFH9CCzZpHJoB1aP5RgXJJcBpHwFp2K', // хеш для пароля "password"
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     }
+    // Здесь можно добавить других пользователей для тестирования
   ];
-
+  
   return {
     prepare: (query: string) => ({
       bind: (...params: any[]) => ({
-        all: async <T>(): Promise<{ results: T[] }> => {
-          console.log('Mock DB query:', query);
-          console.log('Mock DB params:', params);
-          
-          // Для поиска пользователя по username или email
+        all: async () => {
+          // Для проверки пользователя по имени/email
           if (query.includes('SELECT * FROM users WHERE username')) {
-            const searchTerm = params[0];
-            console.log(`Searching for user: ${searchTerm}`);
+            const username = params[0];
+            console.log(`Searching for user with username: ${username}`);
             
+            // Ищем пользователя по username или email
             const user = mockUsers.find(u => 
-              u.username === searchTerm || u.email === searchTerm
+              u.username.toLowerCase() === username.toLowerCase() || 
+              u.email.toLowerCase() === username.toLowerCase()
             );
             
             if (user) {
-              console.log('User found:', user.username);
-              return { results: [user] as T[] };
+              console.log(`User found: ${user.username}`);
+              return { results: [user] };
             } else {
               console.log('User not found');
               return { results: [] };
@@ -66,7 +74,7 @@ function createMockDb() {
             
             // В моке у всех пользователей роль 'user'
             // В реальном приложении здесь должна быть логика получения ролей из БД
-            return { results: [{ name: 'user' }] as T[] };
+            return { results: [{ name: 'user' }] };
           }
           
           return { results: [] };
@@ -78,62 +86,67 @@ function createMockDb() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json() as { username: string; password: string };
-
-    const useMockDb = process.env.DB_MOCK === 'true';
+    const body = await request.json();
+    const { username, password } = body as { username: string; password: string };
 
     if (!username || !password) {
-      return NextResponse.json({ success: false, message: 'Логин и пароль обязательны' }, { status: 400 });
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Логин и пароль обязательны' 
+      }, { status: 400 });
     }
 
-    let user: any | undefined;
-    if (useMockDb) {
-      const { results } = await createMockDb()
-        .prepare(
-          `SELECT * FROM users WHERE username = ? OR email = ?`
-        )
-        .bind(username, username)
-        .all<any>();
-      user = results[0];
-    } else {
-      const { rows } = await pool.query(
-        `SELECT u.*, r.name as role_name
-         FROM users u
-         LEFT JOIN user_roles ur ON u.id = ur.user_id
-         LEFT JOIN roles r ON ur.role_id = r.id
-         WHERE u.username = $1 OR u.email = $1
-         LIMIT 1`,
-        [username]
-      );
-      user = rows[0];
+    // Ищем пользователя по username или email
+    const userResult = await findUserWithRole(username);
+
+    if (userResult.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Неверный логин или пароль' 
+      }, { status: 401 });
     }
 
-    if (!user) {
-      return NextResponse.json({ success: false, message: 'Неверный логин или пароль' }, { status: 401 });
-    }
+    const user = userResult[0];
 
+    // Проверяем пароль
     const passwordMatch = await verifyPassword(password, user.password_hash);
+
     if (!passwordMatch) {
-      return NextResponse.json({ success: false, message: 'Неверный логин или пароль' }, { status: 401 });
+      return NextResponse.json({ 
+        success: false, 
+        message: 'Неверный логин или пароль' 
+      }, { status: 401 });
     }
 
+    // Создаем токен
     const token = await createToken(
-      { id: user.id, username: user.username, roles: [user.role_name] },
+      { 
+        id: user.id, 
+        username: user.username, 
+        roles: [user.role_name] 
+      },
       [user.role_name]
     );
-    await setAuthCookie(token);
 
-    const { password_hash, role_name, ...userWithoutPassword } = user;
+    // Устанавливаем cookie
+    await setAuthCookie(token);
 
     return NextResponse.json({
       success: true,
       message: 'Успешный вход в систему',
-      user: { ...userWithoutPassword, role: role_name },
-      token
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        role: user.role_name
+      }
     });
+
   } catch (error) {
     console.error('Login error:', error);
-    return NextResponse.json({ success: false, message: 'Ошибка при входе в систему' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Ошибка при входе в систему' 
+    }, { status: 500 });
   }
 }
-
