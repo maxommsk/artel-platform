@@ -26,7 +26,7 @@ function createMockDb() {
   const mockUsers: MockUser[] = [
     { 
       id: 1, 
-@@ -64,90 +64,86 @@ function createMockDb() {
+-64,90 +64,86 @@ function createMockDb() {
             } else {
               console.log('User not found');
               return { results: [] };
