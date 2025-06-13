@@ -4,6 +4,36 @@ import { db } from "@/lib/db";
 import { withRoleCheck, AccessRequirements } from "@/lib/rbac";
 import { getCurrentUser } from "@/lib/auth";
 
+const DEFAULT_TARIFFS: Record<number, {
+  name: string;
+  initial_payment_percent: number;
+  monthly_payment_percent: number;
+  max_term_months: number;
+  acceleration_coefficient: number;
+}> = {
+  1: {
+    name: "Стандарт",
+    initial_payment_percent: 20,
+    monthly_payment_percent: 0.5,
+    max_term_months: 15 * 12,
+    acceleration_coefficient: 0.01,
+  },
+  2: {
+    name: "Оптимальный",
+    initial_payment_percent: 30,
+    monthly_payment_percent: 0.7,
+    max_term_months: 10 * 12,
+    acceleration_coefficient: 0.015,
+  },
+  3: {
+    name: "Ускоренный",
+    initial_payment_percent: 50,
+    monthly_payment_percent: 1,
+    max_term_months: 5 * 12,
+    acceleration_coefficient: 0.02,
+  },
+};
+
 interface CalculatorInput {
   tariff_id: number;
   property_price: number;
@@ -22,25 +52,38 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { results: tariffs } = await db
-      .prepare(`SELECT * FROM tariffs WHERE id = ?`)
-      .bind(data.tariff_id)
-      .all();
-
-    if (tariffs.length === 0) {
-      return NextResponse.json(
-        { success: false, message: "Указанный тариф не существует" },
-        { status: 404 }
-      );
-    }
-
-    const tariff = tariffs[0] as {
+    let tariff: {
       name: string;
       initial_payment_percent: number;
       monthly_payment_percent: number;
       max_term_months: number;
       acceleration_coefficient: number;
-    };
+    } | null = null;
+
+    if (db) {
+      try {
+        const { results: tariffs } = await db
+          .prepare(`SELECT * FROM tariffs WHERE id = ?`)
+          .bind(data.tariff_id)
+          .all();
+        if (tariffs.length > 0) {
+          tariff = tariffs[0] as typeof tariff;
+        }
+      } catch (err) {
+        console.error("DB error while fetching tariff:", err);
+      }
+    }
+
+    if (!tariff) {
+      tariff = DEFAULT_TARIFFS[data.tariff_id] || null;
+    }
+
+    if (!tariff) {
+      return NextResponse.json(
+        { success: false, message: "Указанный тариф не существует" },
+        { status: 404 }
+      );
+    }
 
     const initialPaymentAmount =
       data.property_price * (tariff.initial_payment_percent / 100);
@@ -66,41 +109,49 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     let memberId: number | null = null;
 
-    if (user) {
-      const { results: members } = await db
-        .prepare("SELECT id FROM members WHERE user_id = ?")
-        .bind(user.userId)
-        .all();
+    if (user && db) {
+      try {
+        const { results: members } = await db
+          .prepare("SELECT id FROM members WHERE user_id = ?")
+          .bind(user.userId)
+          .all();
 
-      if (members.length > 0) {
-        memberId = members[0].id as number;
+        if (members.length > 0) {
+          memberId = members[0].id as number;
+        }
+      } catch (err) {
+        console.error("DB error while fetching member:", err);
       }
     }
 
     let calculationId: number | null = null;
-    if (memberId) {
-      const result = await db
-        .prepare(
-          `INSERT INTO acceleration_calculations (
-            member_id, tariff_id, initial_payment_amount, monthly_payment_amount,
-            property_price, base_term_months, new_members_count, 
-            accelerated_term_months, saved_months
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        )
-        .bind(
-          memberId,
-          data.tariff_id,
-          initialPaymentAmount,
-          monthlyPaymentAmount,
-          data.property_price,
-          baseTermMonths,
-          data.new_members_count,
-          accelerationMonths,
-          savedMonths
-        )
-        .run();
+    if (memberId && db) {
+      try {
+        const result = await db
+          .prepare(
+            `INSERT INTO acceleration_calculations (
+              member_id, tariff_id, initial_payment_amount, monthly_payment_amount,
+              property_price, base_term_months, new_members_count,
+              accelerated_term_months, saved_months
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          )
+          .bind(
+            memberId,
+            data.tariff_id,
+            initialPaymentAmount,
+            monthlyPaymentAmount,
+            data.property_price,
+            baseTermMonths,
+            data.new_members_count,
+            accelerationMonths,
+            savedMonths
+          )
+          .run();
 
-      calculationId = result.meta.last_row_id;
+        calculationId = result.meta.last_row_id;
+      } catch (err) {
+        console.error("DB error while saving calculation:", err);
+      }
     }
 
     const calculationResult = {
