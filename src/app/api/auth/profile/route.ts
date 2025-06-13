@@ -30,32 +30,35 @@ function createMockDb() {
   return {
     prepare: (query: string) => ({
       bind: (...params: any[]) => ({
-        all: async () => {
+        all: async <T = any>() => {
           // Для получения пользователя по ID
           if (query.includes('SELECT * FROM users WHERE id')) {
-            return { 
-              results: [{ 
-                id: params[0], 
-                username: 'user' + params[0],
-                email: `user${params[0]}@example.com`,
-                first_name: 'Максим',
-                last_name: 'Цветков',
-                middle_name: 'Юрьевич',
-                phone: '+79777707950',
-                password_hash: '$2a$10$XQxBGI0Vz8mGUx.j3UZBxeKFH9CCzZpHJoB1aP5RgXJJcBpHwFp2K',
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }] 
+            return {
+              results: [
+                {
+                  id: params[0],
+                  username: 'user' + params[0],
+                  email: `user${params[0]}@example.com`,
+                  first_name: 'Максим',
+                  last_name: 'Цветков',
+                  middle_name: 'Юрьевич',
+                  phone: '+79777707950',
+                  password_hash:
+                    '$2a$10$XQxBGI0Vz8mGUx.j3UZBxeKFH9CCzZpHJoB1aP5RgXJJcBpHwFp2K',
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                },
+              ] as T[],
             };
           }
-          return { results: [] };
+          return { results: [] as T[] };
         },
-        run: async () => ({ 
-          success: true, 
-          meta: { last_row_id: 1 }
-        })
-      })
-    })
+        run: async () => ({
+          success: true,
+          meta: { last_row_id: 1 },
+        }),
+      }),
+    }),
   };
 }
 
@@ -98,10 +101,11 @@ export async function POST(request: NextRequest) {
     if (useMockDb) {
       const dbMock = createMockDb();
 
-      const { results } = await dbMock.prepare(
-        'SELECT * FROM users WHERE id = ?'
-      ).bind(userId).all();
-      const user = results?.[0] as UserRecord;
+      const { results } = await dbMock
+        .prepare('SELECT * FROM users WHERE id = ?')
+        .bind(userId)
+        .all<UserRecord>();
+      const user = results?.[0];
       if (!user) {
         return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
       }
@@ -119,15 +123,17 @@ export async function POST(request: NextRequest) {
         userId
       ).run();
 
-      const { results: updatedResults } = await dbMock.prepare(
-        'SELECT * FROM users WHERE id = ?'
-      ).bind(userId).all();
-      updatedUser = updatedResults?.[0] as UserRecord;
+      const { results: updatedResults } = await dbMock
+        .prepare('SELECT * FROM users WHERE id = ?')
+        .bind(userId)
+        .all<UserRecord>();
+      updatedUser = updatedResults?.[0];
     } else if (hasD1 && db) {
-      const { results } = await db.prepare(
-        'SELECT * FROM users WHERE id = ?'
-      ).bind(userId).all();
-      const user = results?.[0] as UserRecord;
+      const { results } = await db
+        .prepare('SELECT * FROM users WHERE id = ?')
+        .bind(userId)
+        .all<UserRecord>();
+      const user = results?.[0];
       if (!user) {
         return NextResponse.json({ success: false, message: 'Пользователь не найден' }, { status: 404 });
       }
@@ -145,10 +151,11 @@ export async function POST(request: NextRequest) {
         userId
       ).run();
 
-      const { results: updatedResults } = await db.prepare(
-        'SELECT * FROM users WHERE id = ?'
-      ).bind(userId).all();
-      updatedUser = updatedResults?.[0] as UserRecord;
+      const { results: updatedResults } = await db
+        .prepare('SELECT * FROM users WHERE id = ?')
+        .bind(userId)
+        .all<UserRecord>();
+      updatedUser = updatedResults?.[0];
     } else {
       // Используем PostgreSQL
       const { rows } = await pool.query<UserRecord>(
@@ -202,5 +209,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message: error?.message || 'Ошибка сервера' }, { status: 500 });
   }
 }
-
-
