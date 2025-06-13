@@ -41,13 +41,26 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const res = await fetch('/api/calculator', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    });
-    const data: CalculatorResponse = await res.json();
-    setResult(data.calculation ?? null);
+    try {
+      const res = await fetch('/api/calculator', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tariff_id: Number(formData.tariff_id),
+          property_price: Number(formData.property_price),
+          new_members_count: Number(formData.new_members_count),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.message || 'Ошибка расчета');
+        return;
+      }
+      const data: CalculatorResponse = await res.json();
+      setResult(data.calculation ?? null);
+    } catch (error: any) {
+      alert(error.message || 'Не удалось выполнить запрос');
+    }
   };
 
   return (
@@ -199,7 +212,7 @@ export default function Home() {
                   <span>Срок рассрочки до 5 лет</span>
                 </li>
                 <li className="flex items-start">
-                                     <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
                   </svg>
                   <span>Ежемесячный платеж 1.0%</span>
@@ -324,6 +337,7 @@ export default function Home() {
                   </div>
                   <div>
                     <h4 className="font-bold">Защита от инфляции</h4>
+
                     <p className="text-gray-600">Стоимость токена привязана к рыночной стоимости 1 м² жилья в регионе.</p>
                   </div>
                 </div>
