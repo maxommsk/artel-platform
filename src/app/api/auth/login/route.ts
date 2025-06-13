@@ -26,6 +26,33 @@ function createMockDb() {
   const mockUsers: MockUser[] = [
     { 
       id: 1, 
+      username: 'admin',
+      email: 'admin@example.com',
+      password_hash: '$2b$10$example_hash_here',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
+    }
+  ];
+
+  return {
+    prepare: (query: string) => ({
+      bind: (...params: any[]) => ({
+        all: async <T>(): Promise<{ results: T[] }> => {
+          console.log('Mock DB query:', query);
+          console.log('Mock DB params:', params);
+          
+          // Для поиска пользователя по username или email
+          if (query.includes('SELECT * FROM users WHERE username')) {
+            const searchTerm = params[0];
+            console.log(`Searching for user: ${searchTerm}`);
+            
+            const user = mockUsers.find(u => 
+              u.username === searchTerm || u.email === searchTerm
+            );
+            
+            if (user) {
+              console.log('User found:', user.username);
+              return { results: [user] as T[] };
             } else {
               console.log('User not found');
               return { results: [] };
@@ -39,7 +66,7 @@ function createMockDb() {
             
             // В моке у всех пользователей роль 'user'
             // В реальном приложении здесь должна быть логика получения ролей из БД
-            return { results: [{ name: 'user' }] };
+            return { results: [{ name: 'user' }] as T[] };
           }
           
           return { results: [] };
@@ -109,3 +136,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message: 'Ошибка при входе в систему' }, { status: 500 });
   }
 }
+
