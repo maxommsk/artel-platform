@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
           `SELECT * FROM users WHERE username = ? OR email = ?`
         )
         .bind(username, username)
-        .all<any>();
+        .all();
       user = results[0];
     } else {
       const { rows } = await pool.query(
