@@ -8,6 +8,7 @@ export const pool = new Pool({
   }
 });
 
+
 export async function initDatabase() {
   try {
     const client = await pool.connect();
@@ -27,8 +28,22 @@ export async function initDatabase() {
         id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        phone VARCHAR(20) UNIQUE,
+        first_name VARCHAR(100),
+        last_name VARCHAR(100),
+        middle_name VARCHAR(100),
         role_id INTEGER REFERENCES roles(id),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_roles (
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role_id INTEGER NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+        PRIMARY KEY (user_id, role_id)
       )
     `);
 
@@ -45,6 +60,13 @@ export async function initDatabase() {
     console.error('Database initialization error:', error);
     throw error;
   }
+}
+
+// Initialize tables on first import unless disabled
+if (process.env.DB_INIT !== 'false') {
+  initDatabase().catch((err) => {
+    console.error('Database initialization error:', err);
+  });
 }
 
 export async function createUser(userData: any) {
@@ -72,37 +94,6 @@ export async function findUserByUsernameOrEmail(username: string, email: string)
     );
     
     return result.rows;
-  } finally {
-    client.release();
-  }
-}
-
-export async function findUserWithRole(username: string) {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(`
-      SELECT u.*, r.name as role_name 
-      FROM users u
-      LEFT JOIN roles r ON u.role_id = r.id
-      WHERE u.username = $1 OR u.email = $1
-      LIMIT 1
-    `, [username]);
-    
-    return result.rows;
-  } finally {
-    client.release();
-  }
-}
-
-export async function getRoleByName(roleName: string) {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(
-      'SELECT id FROM roles WHERE name = $1 LIMIT 1',
-      [roleName]
-    );
-    
-    return result.rows[0];
   } finally {
     client.release();
   }
