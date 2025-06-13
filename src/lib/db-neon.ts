@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Pool } from 'pg';
 
 export const pool = new Pool({
@@ -26,7 +27,6 @@ export async function initDatabase() {
         id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
         role_id INTEGER REFERENCES roles(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
