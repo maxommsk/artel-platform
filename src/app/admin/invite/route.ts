@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
 export async function POST(request: NextRequest) {
-  const { email } = await request.json();
+  const { email } = (await request.json()) as { email?: string };
   if (!email) return NextResponse.json({ message: 'Email required' }, { status: 400 });
 
   // Здесь должно быть реальное отправление письма
