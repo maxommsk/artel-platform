@@ -14,7 +14,7 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   await initDatabase();
-  const { id, status } = await request.json();
+  const { id, status } = (await request.json()) as { id?: number; status?: string };
   await pool.query('UPDATE users SET status = $1 WHERE id = $2', [status, id]);
   return NextResponse.json({ success: true });
 }
