@@ -24,16 +24,17 @@ function createMockDb() {
   // Хранилище пользователей для мока
   // В реальном приложении это должно быть заменено на настоящую базу данных
   const mockUsers: MockUser[] = [
-    { 
-      id: 1, 
-      username: 'maxommsk@gmail.com', 
+    {
+      id: 1,
+      username: 'maxommsk@gmail.com',
       email: 'maxommsk@gmail.com',
-      password_hash: '$2a$10$XQxBGI0Vz8mGUx.j3UZBxeKFH9CCzZpHJoB1aP5RgXJJcBpHwFp2K', // хеш для пароля "password"
+      // хеш для пароля "Maximka1992"
+      password_hash: '$2b$10$wL2BJPmb5fZsH7B4JMBfVOPZvFuF3qNeWM/qh2RRkaNnC22XGJNLS',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     },
-    { 
-      id: 2, 
+    {
+      id: 2,
       username: 'maxi_trade@mail.ru', 
       email: 'maxi_trade@mail.ru',
       password_hash: '$2a$10$XQxBGI0Vz8mGUx.j3UZBxeKFH9CCzZpHJoB1aP5RgXJJcBpHwFp2K', // хеш для пароля "password"
@@ -72,9 +73,10 @@ function createMockDb() {
             const userId = params[0];
             console.log(`Getting roles for user ID: ${userId}`);
             
-            // В моке у всех пользователей роль 'user'
-            // В реальном приложении здесь должна быть логика получения ролей из БД
-            return { results: [{ name: 'user' }] };
+          // Для администратора возвращаем роль 'admin'
+          // В реальном приложении здесь должна быть логика получения ролей из БД
+          const roleName = userId === 1 ? 'admin' : 'user';
+          return { results: [{ name: roleName }] };
           }
           
           return { results: [] };
