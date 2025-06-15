@@ -34,9 +34,14 @@ export async function initDatabase() {
         last_name VARCHAR(100),
         middle_name VARCHAR(100),
         role_id INTEGER REFERENCES roles(id),
+        status VARCHAR(50) DEFAULT 'новичок',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
+    `);
+
+    await client.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'новичок'
     `);
 
     await client.query(`
