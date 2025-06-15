@@ -16,8 +16,8 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetch('/api/admin/users')
-      .then(res => res.json())
-      .then((data: any) => setUsers(data.users || []));
+      .then((res) => res.json() as Promise<{ users: User[] }>)
+      .then((data) => setUsers(data.users ?? []));
   }, []);
 
   const updateStatus = async (id: number, status: string) => {
@@ -37,8 +37,8 @@ export default function AdminDashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: inviteEmail })
     });
-    const data = (await res.json()) as any;
-    setMessage(data.message || '');
+    const data = (await res.json()) as { message?: string };
+    setMessage(data.message ?? '');
   };
 
   return (
