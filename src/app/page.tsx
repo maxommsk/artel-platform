@@ -28,8 +28,20 @@ interface CalculatorResponse {
 
 export default function Home() {
   const [formData, setFormData] = useState({
-@@ -43,64 +44,51 @@ export default function Home() {
-    e.preventDefault();
+ tariff_id: '',
+    property_price: '',
+    new_members_count: '',
+  })
+  const [result, setResult] = useState<Calculation | null>(null)
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value })
+  }
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
     try {
       const res = await fetch('/api/calculator', {
         method: 'POST',
