@@ -1,11 +1,8 @@
 import 'dotenv/config';
-import { Pool } from 'pg';
+import { Pool } from '@neondatabase/serverless';
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
+  connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL
 });
 
 
@@ -28,6 +25,9 @@ export async function initDatabase() {
         id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        phone VARCHAR(20) UNIQUE,
+        first_name VARCHAR(100),
         password_hash TEXT NOT NULL,
         phone VARCHAR(20) UNIQUE,
         first_name VARCHAR(100),
