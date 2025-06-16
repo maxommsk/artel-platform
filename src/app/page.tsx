@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useState } from 'react';
-import Link from 'next/link';
+import React, { useState } from 'react'
+import Link from 'next/link'
+import CrossLinks from '@/components/CrossLinks'
 
 interface Calculation {
   tariff_id: number;
@@ -27,19 +28,7 @@ interface CalculatorResponse {
 
 export default function Home() {
   const [formData, setFormData] = useState({
-    tariff_id: '',
-    property_price: '',
-    new_members_count: '',
-  });
-  const [result, setResult] = useState<Calculation | null>(null);
-
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+@@ -43,64 +44,51 @@ export default function Home() {
     e.preventDefault();
     try {
       const res = await fetch('/api/calculator', {
@@ -65,20 +54,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Навигационная панель */}
-      <nav className="bg-white shadow-md">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="text-2xl font-bold text-blue-600">ЖНК "Артель"</div>
-          <div className="space-x-4">
-            <Link href="/login" className="px-4 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600 transition">
-              Войти
-            </Link>
-            <Link href="/register" className="px-4 py-2 rounded-md border border-blue-500 text-blue-500 hover:bg-blue-50 transition">
-              Регистрация
-            </Link>
-          </div>
-        </div>
-      </nav>
+
       
       {/* Главный баннер */}
       <div className="bg-blue-600 text-white py-16">
@@ -418,6 +394,7 @@ export default function Home() {
               </div>
               
               <div className="bg-white bg-opacity-10 p-6 rounded-lg">
+             
                 <h3 className="text-xl font-bold mb-3">Смарт-контракты</h3>
                 <p className="text-blue-100">
                   Автоматическое исполнение обязательств через смарт-контракты обеспечивает надежность и исключает человеческий фактор.
@@ -443,9 +420,13 @@ export default function Home() {
               Войти в личный кабинет
             </Link>
           </div>
-        </div>
       </div>
-      
+    </div>
+
+      <div className="container mx-auto px-4">
+        <CrossLinks />
+      </div>
+
       {/* Подвал */}
       <footer className="bg-gray-800 text-white py-12">
         <div className="container mx-auto px-4">
