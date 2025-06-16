@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface MenuItem {
   id: string;
@@ -21,6 +22,18 @@ const menu: MenuItem[] = [
 
 export default function AdminDashboard() {
   const [active, setActive] = useState('main');
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('user');
+      router.push('/');
+    } catch (error) {
+      console.error('Ошибка при выходе:', error);
+    }
+  };
 
   const renderSection = () => {
     switch (active) {
@@ -59,12 +72,12 @@ export default function AdminDashboard() {
               {item.label}
             </button>
           ))}
-          <a
-            href="/logout"
-            className="block w-full text-left px-3 py-2 rounded hover:bg-gray-700"
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center px-3 py-2 rounded hover:bg-gray-700"
           >
             <span className="mr-2 text-xl">🔒</span>Выход
-          </a>
+          </button>
         </nav>
       </aside>
       <main className="flex-1 p-6 bg-gray-100 overflow-y-auto">{renderSection()}</main>
